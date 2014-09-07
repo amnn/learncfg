@@ -33,7 +33,7 @@
  'LPAR   "\\("
  'RPAR   "\\)"
  'VAR    "[A-z][A-z0-9_]*"
- 'NUM    "[0-9]+(\.[0-9]+)?"}
+ 'NUM    "[0-9]+(\\.[0-9]+)?"}
 
 (cfg (:Expr => :Term | :Expr PLUSOP :Expr )
      (:Term => :Val | LPAR :Expr RPAR | :Term MULOP :Term)
