@@ -1,6 +1,5 @@
 (ns cfg.tokenize
-  (:import java.lang.IllegalArgumentException)
-  )
+  (:import java.lang.IllegalArgumentException))
 
 (defn- first-matching [ms index]
   "Returns the first matcher from `ms` whose next match from `index` starts
