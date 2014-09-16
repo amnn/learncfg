@@ -1,11 +1,11 @@
 (ns cfg.cfg)
 
-(defmacro cfg [rules])
+(defmacro cfg [& rules])
 
-(defmacro rule [body])
+(defmacro rule [& body])
 
 (defn add-rule [g r])
 
-(defn rule-seq [g])
+(defn remove-rule [g r])
 
-(defn non-term-seq [g])
+(defn rule-seq [g])
