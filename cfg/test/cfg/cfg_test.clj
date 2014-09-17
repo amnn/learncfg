@@ -41,10 +41,10 @@
 
   (testing "existing non-terminal"
     (is (= '{:S #{[A] [B C]}}
-           (add-rule '{:S [[A]]} '[:S B C]))))
+           (add-rule '{:S #{[A]}} '[:S B C]))))
 
   (testing "existing rule"
-    (let [g ['{:S #{[A]}}]]
+    (let [g '{:S #{[A]}}]
       (is (= g (add-rule g '[:S A]))))))
 
 (deftest remove-rule-test
@@ -67,9 +67,9 @@
     (let [g '{:S #{[B C]}}]
       (is (= g (remove-rule g '[:T A]))))))
 
-
 (deftest rule-seq-test
   (testing "rule-seq"
-    (is (every? '#{[:S A] [:S B C] [:T D]}
-                (rule-seq '{:S #{[A] [B C]} :T #{[D]}})))))
+    (let [rs (rule-seq '{:S #{[A] [B C]} :T #{[D]}})]
+      (is (every? '#{[:S A] [:S B C] [:T D]} rs))
+      (is (= 3 (count rs))))))
 
