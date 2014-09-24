@@ -48,7 +48,7 @@
 (defn add-rule
   "Add a singleton rule `s => rs` to the grammar represented by `g`."
   [g [s & rs]]
-  (update-in g [s] conj (vec rs)))
+  (update-in g [s] union #{(vec rs)}))
 
 (defn- clean-cfg [g]
   (into {} (remove (comp empty? val) g)))
