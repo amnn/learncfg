@@ -9,11 +9,3 @@
     (if-let [[x & xs*] (seq xs)]
       (cons x (interleave ys xs*))
       ys)))
-
-(defn interleave*
-  "Takes a (potentially infinite) sequence of (potentially infinite) sequences
-  and returns the interleavings of all of them."
-  [xss]
-  (lazy-seq
-    (when-let [[xs & xss*] (seq xss)]
-      (interleave xs (interleave* xss*)))))
