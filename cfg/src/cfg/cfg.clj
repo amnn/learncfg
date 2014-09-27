@@ -1,5 +1,7 @@
 (ns cfg.cfg
-  (require [clojure.set :refer [union]]))
+  (refer-clojure :exclude [interleave])
+  (require [clojure.set :refer [union]]
+           [cfg.util :refer :all]))
 
 (defn- arrow? [x] (= '=> x))
 
@@ -31,7 +33,8 @@
 
   This defines two rules, for the non-terminal `:S`. The first being
   `:S => A B :C D` and the second being `:S => E F :G H`. Rules may be
-  empty, i.e. `(:S => )`"
+  empty, i.e. `(:S => )`. The `:S` non-terminal is implicitly the starting
+  non-terminal."
   [& rules]
   `'~(->> rules
           (map rule->map)
@@ -66,3 +69,39 @@
   every rule `s => rs` in `g`."
   [g]
   (mapcat non-term-rules g))
+
+(defn non-terms [r]
+  "Returns the list of non-terminals along with the indices they occur at."
+  (keep-indexed #(when (keyword? %2) [% %2]) r))
+
+(declare derivation-seq)
+
+(defn expand-rule [g r]
+  "Fills the non-terminals in the rule `r` with the derivation-seqs from the
+  grammar `g` and the appropriate non-terminals."
+  (let [nts (non-terms r)]
+    (lazy-seq
+      (if-let [is (seq (map first nts))]
+        (let [bs (->> nts
+                      (map #(derivation-seq g (second %)))
+                      combine)]
+          (cons r (map #(apply assoc r
+                               (interleave is %))
+                       bs)))
+        (list r)))))
+
+(defn derivation-seq
+  "Returns a list of derivations from non-terminal `s` in grammar `g`."
+  [g s]
+  (->> (seq (g s))
+       (map #(expand-rule g %))
+       interleave*))
+
+(defn lang-seq
+  "Returns a sequence of strings in the language.
+  **NOTE** If the language is ambiguous, this sequence will contain
+  duplicates."
+  [g]
+  (->> (derivation-seq g :S)
+       (map flatten)
+       (filter #(every? symbol? %))))
