@@ -1,7 +1,6 @@
 (ns cfg.cfg
-  (refer-clojure :exclude [interleave])
   (require [clojure.set :refer [union]]
-           [cfg.util :refer :all]))
+           [cfg.list-util :refer :all]))
 
 (defn- arrow? [x] (= '=> x))
 
@@ -82,35 +81,28 @@
   "Complement of `word?`"
   [s] (not-every? symbol? s))
 
-(declare derivation-seq)
-
-(defn expand-rule
-  "Fills the non-terminals in the rule `r` with the derivation-seqs from the
-  grammar `g` and the appropriate non-terminals."
-  [g r]
-  (let [nts (non-terms r)]
-    (lazy-seq
-      (if-let [is (seq (map first nts))]
-        (let [bs (->> nts
-                      (map #(derivation-seq g (second %)))
+(defn step-rules
+  "Creates a memoized function for a given grammar `g` that, when given a rule
+  it produces that rule's immediate children."
+  [g]
+  (memoize
+    (fn [r]
+      (when-let [nts (seq (non-terms r))]
+        (let [is (map first nts)
+              bs (->> nts
+                      (map (comp g second))
                       combine)]
-          (cons r (map #(apply assoc r
-                               (interleave is %))
-                       bs)))
-        (list r)))))
+          (map #(->> (interleave is %)
+                     (apply assoc r)
+                     flatten vec)
+               bs))))))
 
 (defn derivation-seq
   "Returns a list of derivations from non-terminal `s` in grammar `g`."
-  [g s]
-  (->> (seq (g s))
-       (map #(expand-rule g %))
-       interleave*))
+  [g s] (bfs-seq (step-rules g) [s]))
 
 (defn lang-seq
   "Returns a sequence of strings in the language.
   **NOTE** If the language is ambiguous, this sequence will contain
   duplicates."
-  [g]
-  (->> (derivation-seq g :S)
-       (map flatten)
-       (filter word?)))
+  [g] (filter word? (derivation-seq g :S)))
