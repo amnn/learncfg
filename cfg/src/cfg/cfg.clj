@@ -70,15 +70,24 @@
   [g]
   (mapcat non-term-rules g))
 
-(defn non-terms [r]
+(defn non-terms
   "Returns the list of non-terminals along with the indices they occur at."
-  (keep-indexed #(when (keyword? %2) [% %2]) r))
+  [r] (keep-indexed #(when (keyword? %2) [% %2]) r))
+
+(defn word?
+  "Predicate to say whether a derivation is a word."
+  [s] (every? symbol? s))
+
+(defn not-word?
+  "Complement of `word?`"
+  [s] (not-every? symbol? s))
 
 (declare derivation-seq)
 
-(defn expand-rule [g r]
+(defn expand-rule
   "Fills the non-terminals in the rule `r` with the derivation-seqs from the
   grammar `g` and the appropriate non-terminals."
+  [g r]
   (let [nts (non-terms r)]
     (lazy-seq
       (if-let [is (seq (map first nts))]
@@ -104,4 +113,4 @@
   [g]
   (->> (derivation-seq g :S)
        (map flatten)
-       (filter #(every? symbol? %))))
+       (filter word?)))
