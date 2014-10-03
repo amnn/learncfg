@@ -73,3 +73,8 @@
       (is (every? '#{[:S A] [:S B C] [:T D]} rs))
       (is (= 3 (count rs))))))
 
+(deftest word?-test
+  (testing "a word"
+    (let [w '[A B C]]
+      (is (word? w))
+      (is (not (not-word? w))))))

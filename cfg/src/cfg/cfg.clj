@@ -69,10 +69,6 @@
   [g]
   (mapcat non-term-rules g))
 
-(defn non-terms
-  "Returns the list of non-terminals along with the indices they occur at."
-  [r] (keep-indexed #(when (keyword? %2) [% %2]) r))
-
 (defn word?
   "Predicate to say whether a derivation is a word."
   [s] (every? symbol? s))
@@ -80,29 +76,3 @@
 (defn not-word?
   "Complement of `word?`"
   [s] (not-every? symbol? s))
-
-(defn step-rules
-  "Creates a memoized function for a given grammar `g` that, when given a rule
-  it produces that rule's immediate children."
-  [g]
-  (memoize
-    (fn [r]
-      (when-let [nts (seq (non-terms r))]
-        (let [is (map first nts)
-              bs (->> nts
-                      (map (comp g second))
-                      combine)]
-          (map #(->> (interleave is %)
-                     (apply assoc r)
-                     flatten vec)
-               bs))))))
-
-(defn derivation-seq
-  "Returns a list of derivations from non-terminal `s` in grammar `g`."
-  [g s] (bfs-seq (step-rules g) [s]))
-
-(defn lang-seq
-  "Returns a sequence of strings in the language.
-  **NOTE** If the language is ambiguous, this sequence will contain
-  duplicates."
-  [g] (filter word? (derivation-seq g :S)))
