@@ -1,6 +1,6 @@
 (ns cfg.cfg
-  (require [clojure.set :refer [union]]
-           [cfg.list-util :refer :all]))
+  (:require [clojure.set :refer [union]]
+            [cfg.list-util :refer :all]))
 
 (defn- arrow? [x] (= '=> x))
 
