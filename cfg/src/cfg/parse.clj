@@ -1,5 +1,8 @@
 (ns cfg.parse
-  (:require [cfg.cfg :refer [rule-seq]]))
+  (:require [clojure.set :refer [union]]
+            [clojure.core.reducers :as r]
+            [cfg.cfg :refer [rule-seq]]
+            [cfg.list-util :refer [queue]]))
 
 (defn- null-trans-rule?
   "Predicate indicating whether a rule is null transitive: This means that if
@@ -13,7 +16,34 @@
   `g`."
   [g] (filter null-trans-rule? (rule-seq g)))
 
-(defn erasable
+(defn- invert-rule [[s & rs]]
+  (if (pos? (count rs))
+    (let [nts (into #{} rs)
+          rule (atom [(count nts) s])]
+      (into {} (map #(vector % #{rule}) nts)))
+    {nil #{s}}))
+
+(defn- invert-graph
+  "Takes a sequence of rules, and inverts it to form a map from non-terminals
+  to atoms representing the rules they appear in. Each atom holds a pair
+  containing the number of non-terminals in the rule, and the LHS of the rule."
+  [rs] (apply merge-with union (map invert-rule rs)))
+
+(defn nullable
   "Returns a set of non-terminals in `g` that can be 'erased' i.e. the
   non-terminals from which the empty string can be derived."
-  [g])
+  [g]
+  (let [ntg (->> g null-trans-graph invert-graph)
+        visit #(swap! % update-in [0] dec)]
+    (loop [q (apply queue (get ntg nil))
+           nulls #{}]
+      (if (seq q)
+        (let [nt (peek q)]
+          (recur
+            (->> (ntg nt)
+                 (r/map visit)
+                 (r/filter (comp zero? first))
+                 (r/map second)
+                 (into (pop q)))
+            (conj nulls nt)))
+        nulls))))
