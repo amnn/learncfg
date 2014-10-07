@@ -36,7 +36,7 @@
   (let [ntg (->> g null-trans-graph invert-graph)
         visit #(swap! % update-in [0] dec)]
     (loop [q (apply queue (get ntg nil))
-           nulls #{}]
+           nulls (transient #{})]
       (if (seq q)
         (let [nt (peek q)]
           (recur
@@ -45,5 +45,5 @@
                  (r/filter (comp zero? first))
                  (r/map second)
                  (into (pop q)))
-            (conj nulls nt)))
-        nulls))))
+            (conj! nulls nt)))
+        (persistent! nulls)))))
