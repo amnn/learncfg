@@ -1,7 +1,7 @@
 (ns cfg.parse
   (:require [clojure.set :refer [union]]
             [clojure.core.reducers :as r]
-            [cfg.cfg :refer [rule-seq]]
+            [cfg.cfg :refer [rule-seq null-free terminal? non-terminal?]]
             [cfg.list-util :refer [queue]]))
 
 (defn- null-trans-rule?
@@ -47,3 +47,118 @@
                  (into (pop q)))
             (conj! nulls nt)))
         (persistent! nulls)))))
+
+(defrecord ^:private Item
+  [rule start offset])
+
+(defn- classify
+  "Determines what should be done to the given Earley Item."
+  [{[_ & rs] :rule offset :offset}]
+  {:pre  [(not (neg? offset))]
+   :post [(#{:shift :reduce :predict} %)] }
+  (if-let [el (get (vec rs) offset)]
+    (condp apply [el]
+      terminal?     :shift
+      non-terminal? :predict)
+    :reduce))
+
+(defn- non-terminal
+  "Get the non-terminal on the LHS of the rule in the item."
+  [i] (get-in i [:rule 0]))
+
+(defn- redux-key
+  "Gives the key the start position and the non-terminal symbol of the item.
+  This information can be used to find the items that are completed by this
+  one."
+  [i] ((juxt :start non-terminal) i))
+
+(defn- next-sym
+  "Get the next symbol in the item."
+  [{:keys [rule offset]}]
+  (get rule (inc offset)))
+
+(defn- shift
+  "Move the item's cursor forward."
+  [i] (update-in i [:offset] inc))
+
+(defrecord ^:private ParserState
+  [index redux items complete])
+
+(def ^:private item-seed
+  (->Item '[PARSE :S] 0 0))
+
+(def ^:private success-key
+  (redux-key item-seed))
+
+(defn- initial-state [has-empty?]
+  (->ParserState
+    0 {} (queue item-seed)
+    (if has-empty?
+      #{success-key}
+      #{})))
+
+(defn- reset-state
+  "Reset the completions and item queue of the state, ready to consume the
+  next token."
+  [state]
+  (-> state
+      (assoc :items (queue)
+             :complete #{})
+      (update-in [:index] inc)))
+
+(defn recogniser
+  "Returns the recogniser function for the grammar `g`."
+  [g]
+  (let [nullable? (nullable g)
+        g         (null-free g)
+        init      (initial-state (nullable? :S))]
+    (letfn [(consume-token [{:keys [index items] :as state} tok]
+              (loop [processed? #{}
+                     items items
+                     state (reset-state state)]
+                (if (seq items)
+                  (let [item (peek items)]
+                    (if (processed? item)
+                      (recur processed? (pop items) state)
+                      (case (classify item)
+
+                        :shift
+                        (recur (conj processed? item)
+                               (pop items)
+                               (if (= tok (next-sym item))
+                                 (update-in state [:items]
+                                            conj (shift item))
+                                 state))
+
+                        :reduce
+                        (let [r-key (redux-key item)]
+                          (recur (conj processed? item)
+                                 (->> (get-in state [:redux r-key])
+                                      (map shift)
+                                      (into (pop items)))
+                                 (update-in state [:complete] conj r-key)))
+
+                        :predict
+                        (let [nt         (next-sym item)
+                              r-key      [index nt]
+                              predicted? (contains? (:redux state) r-key)
+                              state      (if predicted?
+                                           state
+                                           (assoc-in state [:redux r-key] #{}))
+                              items      (pop (if (nullable? nt)
+                                                (conj items (shift item))
+                                                items))]
+                          (recur
+                            (conj processed? item)
+                            (if predicted?
+                              items
+                              (into items
+                                    (->> (rule-seq g nt)
+                                         (map #(->Item % index 0)))))
+                            (update-in state [:redux r-key] conj item))))))
+                  state)))]
+      (fn [toks]
+        (-> (->> (conj (vec toks) nil)
+                 (reduce consume-token init)
+                 :complete)
+            (contains? success-key))))))
