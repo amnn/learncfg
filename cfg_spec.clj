@@ -20,8 +20,9 @@
  'ELSE "else"
  'END  "end"
  'VAR  "[A-z][A-z0-9_]*"
+ 'EQ   "\\="
  'SEMI ";"
- 'BOOL "0|1"}
+ 'BOOL "(0|1)"}
 
 (cfg (:Stmt  => IF :Expr THEN :Stmts ELSE :Stmts END)
      (:Stmts => :Stmt | :Stmts SEMI :Stmt)
@@ -29,8 +30,8 @@
      (:Expr  => VAR | BOOL))
 
 ;; Mathematical Expressions
-{'PLUSOP "\\+|-"
- 'MULOP  "\\*|/"
+{'PLUSOP "(\\+|-)"
+ 'MULOP  "(\\*|/)"
  'LPAR   "\\("
  'RPAR   "\\)"
  'VAR    "[A-z][A-z0-9_]*"
