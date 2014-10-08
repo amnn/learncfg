@@ -65,9 +65,17 @@
 
 (defn rule-seq
   "Produces a lazy sequences of rules in `g`, each of the form `[~s, ~@rs] for
-  every rule `s => rs` in `g`."
+  every rule `s => rs` in `g`. Or, if a non-terminal `nt` is also provided,
+  creates a lazy sequence of the rules in `g` with `nt` as their LHS."
+  ([g] (mapcat non-term-rules g))
+  ([g nt] (non-term-rules [nt (g nt)])))
+
+(defn null-free
+  "Return a copy of the grammar without rules that introduce epsilons"
   [g]
-  (mapcat non-term-rules g))
+  (into (empty g)
+        (zipmap (keys g)
+                (map #(disj % []) (vals g)))))
 
 (defn word?
   "Predicate to say whether a derivation is a word."
@@ -76,3 +84,6 @@
 (defn not-word?
   "Complement of `word?`"
   [s] (not-every? symbol? s))
+
+(def terminal? symbol?)
+(def non-terminal? keyword?)
