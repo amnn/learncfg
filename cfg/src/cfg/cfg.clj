@@ -1,6 +1,7 @@
 (ns cfg.cfg
   (:require [clojure.set :refer [union]]
-            [cfg.list-util :refer :all]))
+            [cfg.list-util :refer :all]
+            [clojure.core.reducers :as r]))
 
 (defn- arrow? [x] (= '=> x))
 
@@ -53,7 +54,7 @@
   (update-in g [s] union #{(vec rs)}))
 
 (defn- clean-cfg [g]
-  (into {} (remove (comp empty? val) g)))
+  (into {} (r/remove (comp empty? #(nth % 1)) g)))
 
 (defn remove-rule
   "Removes rule `s => rs` from `g` if it exists."
@@ -72,10 +73,7 @@
 
 (defn null-free
   "Return a copy of the grammar without rules that introduce epsilons"
-  [g]
-  (into (empty g)
-        (zipmap (keys g)
-                (map #(disj % []) (vals g)))))
+  [g] (clean-cfg (r/map #(update-in % [1] disj []) g)))
 
 (defn word?
   "Predicate to say whether a derivation is a word."

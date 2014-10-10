@@ -68,13 +68,40 @@
       (is (= g (remove-rule g '[:T A]))))))
 
 (deftest rule-seq-test
-  (testing "rule-seq"
-    (let [rs (rule-seq '{:S #{[A] [B C]} :T #{[D]}})]
+  (let [g '{:S #{[A] [B C]} :T #{[D]}}
+        rs (rule-seq g)]
+    (testing "rule-seq"
       (is (every? '#{[:S A] [:S B C] [:T D]} rs))
-      (is (= 3 (count rs))))))
+      (is (= 3 (count rs))))
+
+    (testing "filtered rule-seq"
+      (is (= '([:T D]) (rule-seq g :T))))))
+
+(deftest null-free-test
+  (testing "contains null rule"
+    (is (= '{:S #{[A]}}
+           (null-free '{:S #{[A] []}}))))
+
+  (testing "contains empty non-terminal"
+    (is (= '{:S #{[A]}}
+           (null-free '{:S #{[A]} :T #{[]}}))))
+
+  (testing "contains no nulls"
+    (let [g '{:S #{[A]}}]
+      (is (= g (null-free g))))))
 
 (deftest word?-test
   (testing "a word"
     (let [w '[A B C]]
       (is (word? w))
       (is (not (not-word? w))))))
+
+(deftest terminal?-test
+  (testing "terminals"
+    (is (terminal? 'A))
+    (is (not (terminal? :A)))))
+
+(deftest non-terminal?-test
+  (testing "non-terminals"
+    (is (non-terminal? :A))
+    (is (not (non-terminal? 'A)))))
