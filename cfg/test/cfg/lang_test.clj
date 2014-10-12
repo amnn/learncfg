@@ -1,7 +1,7 @@
-(ns cfg.parse-test
+(ns cfg.lang-test
   (:require [clojure.test :refer :all]
             [cfg.cfg :refer :all]
-            [cfg.parse :refer :all]))
+            [cfg.lang :refer :all]))
 
 (deftest recogniser-test
   (testing "left recursion"

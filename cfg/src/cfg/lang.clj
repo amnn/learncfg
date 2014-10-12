@@ -1,4 +1,4 @@
-(ns cfg.parse
+(ns cfg.lang
   (:require [cfg.null :refer [nullable null-free]]
             [clojure.core.reducers :as r]
             [cfg.cfg :refer [rule-seq terminal? non-terminal?]]
@@ -42,17 +42,17 @@
   "Move the item's cursor forward."
   [i] (update-in i [:offset] inc))
 
-(defrecord ^:private ParserState
+(defrecord ^:private EarleyState
   [index reduxns items complete])
 
 (def ^:private item-seed
-  (->Item '[PARSE :S] 0 0))
+  (->Item '[DONE :S] 0 0))
 
 (def ^:private success-key
   (reduxn-key item-seed))
 
 (defn- initial-state [has-empty?]
-  (->ParserState
+  (->EarleyState
     0 {} (queue item-seed)
     (if has-empty?
       #{success-key}
