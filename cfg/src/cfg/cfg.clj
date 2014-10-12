@@ -3,6 +3,9 @@
             [cfg.list-util :refer :all]
             [clojure.core.reducers :as r]))
 
+(defn- non-term-rules [[s rss]]
+  (map #(->> % (list* s) vec) rss))
+
 (defn- arrow? [x] (= '=> x))
 
 (defn- last-i [coll]
@@ -53,16 +56,14 @@
   [g [s & rs]]
   (update-in g [s] union #{(vec rs)}))
 
-(defn- clean-cfg [g]
-  (into {} (r/remove (comp empty? #(nth % 1)) g)))
+(defn clean-cfg
+  "Ensure there are no empty non-terminals."
+  [g] (into {} (r/remove (comp empty? #(nth % 1)) g)))
 
 (defn remove-rule
   "Removes rule `s => rs` from `g` if it exists."
   [g [s & rs]]
   (clean-cfg (update-in g [s] disj (vec rs))))
-
-(defn- non-term-rules [[s rss]]
-  (map #(->> % (list* s) vec) rss))
 
 (defn rule-seq
   "Produces a lazy sequences of rules in `g`, each of the form `[~s, ~@rs] for
@@ -70,10 +71,6 @@
   creates a lazy sequence of the rules in `g` with `nt` as their LHS."
   ([g] (mapcat non-term-rules g))
   ([g nt] (non-term-rules [nt (g nt)])))
-
-(defn null-free
-  "Return a copy of the grammar without rules that introduce epsilons"
-  [g] (clean-cfg (r/map #(update-in % [1] disj []) g)))
 
 (defn word?
   "Predicate to say whether a derivation is a word."

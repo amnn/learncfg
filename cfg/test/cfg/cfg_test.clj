@@ -77,19 +77,6 @@
     (testing "filtered rule-seq"
       (is (= '([:T D]) (rule-seq g :T))))))
 
-(deftest null-free-test
-  (testing "contains null rule"
-    (is (= '{:S #{[A]}}
-           (null-free '{:S #{[A] []}}))))
-
-  (testing "contains empty non-terminal"
-    (is (= '{:S #{[A]}}
-           (null-free '{:S #{[A]} :T #{[]}}))))
-
-  (testing "contains no nulls"
-    (let [g '{:S #{[A]}}]
-      (is (= g (null-free g))))))
-
 (deftest word?-test
   (testing "a word"
     (let [w '[A B C]]
