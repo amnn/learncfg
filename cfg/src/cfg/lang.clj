@@ -95,7 +95,7 @@
              :complete #{})
       (update-in [:index] inc)))
 
-(defn recogniser
+(defn in-lang
   "Returns the recogniser function for the grammar `g`."
   [g]
   (let [nullable?  (nullable g)
