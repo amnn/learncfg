@@ -43,7 +43,7 @@
   [i] (update-in i [:offset] inc))
 
 (defrecord ^:private EarleyState
-  [index reduxns items complete])
+  [reduxns items complete])
 
 (def ^:private item-seed
   (->Item '[DONE :S] 0 0))
@@ -53,7 +53,7 @@
 
 (defn- initial-state [has-empty?]
   (->EarleyState
-    0 {} (queue item-seed)
+    {} (queue item-seed)
     (if has-empty?
       #{success-key}
       #{})))
@@ -92,54 +92,71 @@
   [state]
   (-> state
       (assoc :items (queue)
-             :complete #{})
-      (update-in [:index] inc)))
+             :complete #{})))
+
+(defn- toks->shift?
+  "Given a list of tokens, produces the appropriate shift-predicate"
+  [toks]
+  (fn [i sym]
+    (when-let [t (get toks i)]
+      (= t sym))))
+
+(defn- token-consumer
+  "Takes:
+    * g: the CFG, containing no rules containing epsilons.
+    * nullable?: a predicate that determines whether the non-terminals in `g`
+      can be erased (by deriving the empty string from them)
+    * shift?: a predicate that given an index and a symbol, determines whether
+      the recogniser can shift at the given index if that index contains the
+      given symbol.
+  Returns a function that updates an EarleyState by consuming an extra index
+  position in the input."
+  [g nullable? shift?]
+  (fn [{:keys [items] :as state} index]
+    (loop [processed? #{}, items items
+           state (reset-state state)]
+      (if (seq items)
+        (let [item (peek items)]
+          (if (processed? item)
+            (recur processed? (pop items) state)
+            (case (classify item)
+
+              :shift
+              (recur (conj processed? item)
+                     (pop items)
+                     (if (shift? index (next-sym item))
+                       (enqueue-shift state item)
+                       state))
+
+              :reduce
+              (let [r-key (reduxn-key item)]
+                (recur (conj processed? item)
+                       (into (pop items)
+                             (perform-reduxns state r-key))
+                       (complete-reduxns state r-key)))
+
+              :predict
+              (let [nt         (next-sym item), r-key [index nt]
+                    predicted? (contains? (:reduxns state) r-key)
+                    items      (pop (if (nullable? nt)
+                                      (perform-shift items item)
+                                      items))]
+                (recur
+                  (conj processed? item)
+                  (if predicted?
+                    items
+                    (into items (init-items g nt index)))
+                  (associate-reduxn state r-key item))))))
+        state))))
 
 (defn in-lang
   "Returns the recogniser function for the grammar `g`."
   [g]
-  (let [nullable?  (nullable g)
-        g          (null-free g)
+  (let [nullable? (nullable g), g (null-free g)
         init-state (initial-state (nullable? :S))]
-    (letfn [(consume-token [{:keys [index items] :as state} tok]
-              (loop [processed? #{}
-                     items items
-                     state (reset-state state)]
-                (if (seq items)
-                  (let [item (peek items)]
-                    (if (processed? item)
-                      (recur processed? (pop items) state)
-                      (case (classify item)
-
-                        :shift
-                        (recur (conj processed? item)
-                               (pop items)
-                               (if (= tok (next-sym item))
-                                 (enqueue-shift state item)
-                                 state))
-
-                        :reduce
-                        (let [r-key (reduxn-key item)]
-                          (recur (conj processed? item)
-                                 (into (pop items)
-                                       (perform-reduxns state r-key))
-                                 (complete-reduxns state r-key)))
-
-                        :predict
-                        (let [nt         (next-sym item), r-key [index nt]
-                              predicted? (contains? (:reduxns state) r-key)
-                              items      (pop (if (nullable? nt)
-                                                (perform-shift items item)
-                                                items))]
-                          (recur
-                            (conj processed? item)
-                            (if predicted?
-                              items
-                              (into items (init-items g nt index)))
-                            (associate-reduxn state r-key item))))))
-                  state)))]
-      (fn [toks]
-        (-> (->> (conj (vec toks) nil)
-                 (reduce consume-token init-state)
-                 :complete)
+    (fn [toks]
+      (let [consume-token (token-consumer g nullable? (toks->shift? toks))]
+        (-> (reduce consume-token init-state
+                    (range (inc (count toks))))
+            :complete
             (contains? success-key))))))
