@@ -5,12 +5,16 @@
             [cfg.list-util :refer [queue]]))
 
 (defrecord ^:private Item
-  [rule start offset])
+  [rule start offset toks])
+
+(defn- new-item
+  "Constructs a fresh Earley Item for a rule `r` starting at `start`"
+  [r start] (->Item r start 0 []))
 
 (defn- init-items
   "Create a sequence of new Earley Items for a non-terminal `nt` and grammar
   `g` starting at the index `i`."
-  [g nt i] (map #(->Item % i 0) (rule-seq g nt)))
+  [g nt i] (map #(new-item % i) (rule-seq g nt)))
 
 (defn- classify
   "Determines what should be done to the given Earley Item."
@@ -33,20 +37,27 @@
   one."
   [i] ((juxt :start non-terminal) i))
 
+(defn- item-key
+  "Uniquely identified an item, regardless of the tokens it's processed."
+  [i] ((juxt :rule :start :offset) i))
+
 (defn- next-sym
   "Get the next symbol in the item."
   [{:keys [rule offset]}]
   (get rule (inc offset)))
 
 (defn- shift
-  "Move the item's cursor forward."
-  [i] (update-in i [:offset] inc))
+  "Move the item's cursor forward over a given token or sequence of tokens."
+  [item toks]
+  (-> item
+      (update-in [:offset] inc)
+      (update-in [:toks] conj toks)))
 
 (defrecord ^:private EarleyState
   [reduxns items complete])
 
 (def ^:private item-seed
-  (->Item '[DONE :S] 0 0))
+  (new-item '[DONE :S] 0))
 
 (def ^:private success-key
   (reduxn-key item-seed))
@@ -55,23 +66,27 @@
   (->EarleyState
     {} (queue item-seed)
     (if has-empty?
-      #{success-key}
-      #{})))
+      {success-key #{[]}}
+      {})))
 
 (defn- perform-shift
-  "Shifts an item and adds it to the end of a queue"
-  [q i] (conj q (shift i)))
+  "Shifts an item over tokens and adds it to the end of a queue"
+  [q i toks] (conj q (shift i toks)))
 
 (defn- enqueue-shift
-  "Takes an `item`, shifts it, and adds it to the end of the item queue in the
-  `state`."
-  [state item] (update-in state [:items] perform-shift item))
+  "Takes an `item`, shifts it over some tokens, `toks`, and adds it to the end
+  of the item queue in the `state`."
+  [state item toks]
+  (update-in state [:items]
+             perform-shift item toks))
 
 (defn- perform-reduxns
   "Creates a sequence of all the waiting reductions after they have been
-  reduced."
-  [state r-key]
-  (map shift (get-in state [:reduxns r-key])))
+  reduced. by the given finished `item`."
+  [state item]
+  (let [toks (:toks item)]
+    (map #(shift % toks)
+         (get-in state [:reduxns (reduxn-key item)]))))
 
 (defn- associate-reduxn
   "Add an `item` as waiting for a reduction (keyed by `r-key`) in the parser
@@ -82,9 +97,14 @@
       (update-in state path conj item)
       (assoc-in  state path #{item}))))
 
-(defn- complete-reduxns
-  "Mark a reduction key as completed in the given `state`."
-  [state r-key] (update-in state [:complete] conj r-key))
+(defn- complete-item
+  "Mark an item as completed in the given `state`."
+  [state item]
+  (let [path [:complete (reduxn-key item)]
+        toks (:toks item)]
+    (if (get-in state path)
+      (update-in state path conj toks)
+      (assoc-in  state path #{toks}))))
 
 (defn- reset-state
   "Reset the completions and item queue of the state, ready to consume the
@@ -92,7 +112,7 @@
   [state]
   (-> state
       (assoc :items (queue)
-             :complete #{})))
+             :complete {})))
 
 (defn- toks->shift?
   "Given a list of tokens, produces the appropriate shift-predicate"
@@ -116,33 +136,34 @@
     (loop [processed? #{}, items items
            state (reset-state state)]
       (if (seq items)
-        (let [item (peek items)]
-          (if (processed? item)
+        (let [item (peek items)
+              i-key (item-key item)]
+          (if (processed? i-key)
             (recur processed? (pop items) state)
             (case (classify item)
 
               :shift
-              (recur (conj processed? item)
+              (recur (conj processed? i-key)
                      (pop items)
-                     (if (shift? index (next-sym item))
-                       (enqueue-shift state item)
-                       state))
+                     (let [tok (next-sym item)]
+                       (if (shift? index tok)
+                         (enqueue-shift state item tok)
+                         state)))
 
               :reduce
-              (let [r-key (reduxn-key item)]
-                (recur (conj processed? item)
-                       (into (pop items)
-                             (perform-reduxns state r-key))
-                       (complete-reduxns state r-key)))
+              (recur (conj processed? i-key)
+                     (into (pop items)
+                           (perform-reduxns state item))
+                     (complete-item state item))
 
               :predict
               (let [nt         (next-sym item), r-key [index nt]
                     predicted? (contains? (:reduxns state) r-key)
                     items      (pop (if (nullable? nt)
-                                      (perform-shift items item)
+                                      (perform-shift items item [])
                                       items))]
                 (recur
-                  (conj processed? item)
+                  (conj processed? i-key)
                   (if predicted?
                     items
                     (into items (init-items g nt index)))
