@@ -117,9 +117,10 @@
 (defn- toks->shift?
   "Given a list of tokens, produces the appropriate shift-predicate"
   [toks]
-  (fn [i sym]
-    (when-let [t (get toks i)]
-      (= t sym))))
+  (let [toks-v (vec toks)]
+    (fn [i sym]
+      (when-let [t (get toks-v i)]
+        (= t sym)))))
 
 (defn- token-consumer
   "Takes:
