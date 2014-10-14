@@ -192,6 +192,4 @@
         consume-token (token-consumer g nullable? (constantly true))
         init-state    (initial-state (nullable? :S))]
     (->> (reductions consume-token init-state (range))
-         rest
-         (mapcat #(get-in % [:complete success-key]))
-         (map flatten))))
+         rest (mapcat #(get-in % [:complete success-key])))))
