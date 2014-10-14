@@ -37,10 +37,6 @@
   one."
   [i] ((juxt :start non-terminal) i))
 
-(defn- item-key
-  "Uniquely identified an item, regardless of the tokens it's processed."
-  [i] ((juxt :rule :start :offset) i))
-
 (defn- next-sym
   "Get the next symbol in the item."
   [{:keys [rule offset]}]
@@ -51,7 +47,11 @@
   [item toks]
   (-> item
       (update-in [:offset] inc)
-      (update-in [:toks] conj toks)))
+      (update-in [:toks]
+                 #(if (coll? %2)
+                    (reduce conj %1 %2)
+                    (conj %1 %2))
+                 toks)))
 
 (defrecord ^:private EarleyState
   [reduxns items complete])
@@ -114,14 +114,6 @@
       (assoc :items (queue)
              :complete {})))
 
-(defn- toks->shift?
-  "Given a list of tokens, produces the appropriate shift-predicate"
-  [toks]
-  (let [toks-v (vec toks)]
-    (fn [i sym]
-      (when-let [t (get toks-v i)]
-        (= t sym)))))
-
 (defn- token-consumer
   "Takes:
     * g: the CFG, containing no rules containing epsilons.
@@ -137,14 +129,13 @@
     (loop [processed? #{}, items items
            state (reset-state state)]
       (if (seq items)
-        (let [item (peek items)
-              i-key (item-key item)]
-          (if (processed? i-key)
+        (let [item (peek items)]
+          (if (processed? item)
             (recur processed? (pop items) state)
             (case (classify item)
 
               :shift
-              (recur (conj processed? i-key)
+              (recur (conj processed? item)
                      (pop items)
                      (let [tok (next-sym item)]
                        (if (shift? index tok)
@@ -152,7 +143,7 @@
                          state)))
 
               :reduce
-              (recur (conj processed? i-key)
+              (recur (conj processed? item)
                      (into (pop items)
                            (perform-reduxns state item))
                      (complete-item state item))
@@ -164,21 +155,43 @@
                                       (perform-shift items item [])
                                       items))]
                 (recur
-                  (conj processed? i-key)
+                  (conj processed? item)
                   (if predicted?
                     items
                     (into items (init-items g nt index)))
                   (associate-reduxn state r-key item))))))
         state))))
 
+(defn- toks->shift?
+  "Given a list of tokens, produces the appropriate shift-predicate"
+  [toks]
+  (let [toks-v (vec toks)]
+    (fn [i sym]
+      (when-let [t (get toks-v i)]
+        (= t sym)))))
+
 (defn in-lang
   "Returns the recogniser function for the grammar `g`."
   [g]
-  (let [nullable? (nullable g), g (null-free g)
-        init-state (initial-state (nullable? :S))]
+  (let [nullable?     (nullable g)
+        g             (null-free g)
+        consume-token (partial token-consumer g nullable?)
+        init-state    (initial-state (nullable? :S))]
     (fn [toks]
-      (let [consume-token (token-consumer g nullable? (toks->shift? toks))]
-        (-> (reduce consume-token init-state
-                    (range (inc (count toks))))
-            :complete
-            (contains? success-key))))))
+      (-> (reduce (consume-token (toks->shift? toks))
+                  init-state (range (inc (count toks))))
+          :complete
+          (contains? success-key)))))
+
+(defn lang-seq
+  "Returns an infinite sequence of strings in the language defined by the
+  grammar `g`."
+  [g]
+  (let [nullable?     (nullable g)
+        g             (null-free g)
+        consume-token (token-consumer g nullable? (constantly true))
+        init-state    (initial-state (nullable? :S))]
+    (->> (reductions consume-token init-state (range))
+         rest
+         (mapcat #(get-in % [:complete success-key]))
+         (map flatten))))
