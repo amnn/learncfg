@@ -1,6 +1,7 @@
 ;; Balanced Parentheses
 (tok 'LPAR "\\(" 'RPAR "\\)")
 (cfg (:S => LPAR :S RPAR | :S :S | LPAR RPAR))
+(cfg (:S => LPAR :S RPAR :S | ))
 
 ;; (a^n)(b^n)
 (tok 'A "a" 'B "b")
