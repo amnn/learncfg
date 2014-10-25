@@ -65,12 +65,23 @@
   [g [s & rs]]
   (clean-cfg (update-in g [s] disj (vec rs))))
 
+(defn remove-nt
+  "Remove a non-terminal `nt` from grammar `g`"
+  [g nt] (dissoc g nt))
+
 (defn rule-seq
   "Produces a lazy sequences of rules in `g`, each of the form `[~s, ~@rs] for
   every rule `s => rs` in `g`. Or, if a non-terminal `nt` is also provided,
   creates a lazy sequence of the rules in `g` with `nt` as their LHS."
   ([g] (mapcat non-term-rules g))
   ([g nt] (non-term-rules [nt (g nt)])))
+
+(defn mapr
+  "Applies a function to every rule in the grammar, and returns the resulting
+  grammar"
+  [f g]
+  (reduce add-rule {}
+          (map f (rule-seq g))))
 
 (defn word?
   "Predicate to say whether a derivation is a word."

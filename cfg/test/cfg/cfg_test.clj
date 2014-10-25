@@ -67,6 +67,15 @@
     (let [g '{:S #{[B C]}}]
       (is (= g (remove-rule g '[:T A]))))))
 
+(deftest remove-nt-test
+  (let [g '{:S #{[A] [ C]} :T #{[D]}}]
+    (testing "remove-nt"
+      (is (= (remove-nt g :S)
+             '{:T #{[D]}})))
+
+    (testing "remove-nt non-existent"
+      (is (= (remove-nt g :A) g)))))
+
 (deftest rule-seq-test
   (let [g '{:S #{[A] [B C]} :T #{[D]}}
         rs (rule-seq g)]
@@ -76,6 +85,19 @@
 
     (testing "filtered rule-seq"
       (is (= '([:T D]) (rule-seq g :T))))))
+
+(deftest mapr-test
+  (let [g '{:S #{[A] [B C]} :T #{[D]}}]
+    (testing "mapr identity"
+      (is (= (mapr identity g) g)))
+
+    (testing "mapr const"
+      (is (= (mapr (fn [rs] (vector :S 'A)) g)
+             '{:S #{[A]}})))
+
+    (testing "mapr preserve non-terminals"
+      (is (= (mapr (fn [[s & rs]] [s 'A]) g)
+             '{:S #{[A]} :T #{[A]}})))))
 
 (deftest word?-test
   (testing "a word"
