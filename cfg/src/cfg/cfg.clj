@@ -79,9 +79,12 @@
 (defn mapr
   "Applies a function to every rule in the grammar, and returns the resulting
   grammar"
-  [f g]
-  (reduce add-rule {}
-          (map f (rule-seq g))))
+  [f g] (reduce add-rule {} (map f (rule-seq g))))
+
+(defn mapr*
+  "Applies a function to every rule in the grammar, preserving the
+  non-terminal."
+  [f g] (mapr (fn [[s & rs]] (vec (list* s (f rs)))) g))
 
 (defn word?
   "Predicate to say whether a derivation is a word."

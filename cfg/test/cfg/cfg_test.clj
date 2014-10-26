@@ -92,12 +92,21 @@
       (is (= (mapr identity g) g)))
 
     (testing "mapr const"
-      (is (= (mapr (fn [rs] (vector :S 'A)) g)
-             '{:S #{[A]}})))
+      (is (= '{:S #{[A]}}
+             (mapr (fn [rs] (vector :S 'A)) g))))
 
     (testing "mapr preserve non-terminals"
-      (is (= (mapr (fn [[s & rs]] [s 'A]) g)
-             '{:S #{[A]} :T #{[A]}})))))
+      (is (= '{:S #{[A]} :T #{[A]}}
+             (mapr (fn [[s & rs]] [s 'A]) g))))))
+
+(deftest mapr*-test
+  (let [g '{:S #{[A] [B C]} :T #{[D]}}]
+    (testing "mapr* identity"
+      (is (= (mapr* identity g) g)))
+
+    (testing "mapr* const"
+      (is (= '{:S #{[A]} :T #{[A]}}
+             (mapr* (fn [rs] (vector 'A)) g))))))
 
 (deftest word?-test
   (testing "a word"
