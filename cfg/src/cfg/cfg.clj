@@ -7,6 +7,9 @@
   "Make a rule with LHS `nt` and RHS `rs`."
   [nt rs] (vec (list* nt rs)))
 
+(def ^{:doc "returns the LHS of a rule"} non-terminal first)
+(def ^{:doc "returns the RHS of a rule"} pattern rest)
+
 (defn- non-term-rules [[s rss]]
   (map (partial mk-rule s) rss))
 

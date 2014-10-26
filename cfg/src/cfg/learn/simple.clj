@@ -1,7 +1,8 @@
 (ns cfg.learn.simple
   (:require [clojure.set :refer [union]]
             [cfg.list-util :refer [replace-coll]]
-            [cfg.cfg :refer [mapr mk-rule add-rule remove-nt]]))
+            [cfg.cfg :refer [mapr mk-rule add-rule
+                             remove-nt non-terminal pattern]]))
 
 (defn merge-nts
   "Combine the rules for `nt1` and `nt2` under one terminal (`nt1`), replacing
@@ -18,11 +19,13 @@
 
 (defn extract-rule
   "Takes all instances of `rs` in rules of `g` and replaces them with a
-  non-terminal `nt`. Then adds a rule `nt => rs` to `g`."
-  [g [nt & rs :as rule]]
-  (-> (mapr (fn [[s & rs* :as rule*]]
+  non-terminal `s`. Then adds a rule `s => rs` to `g`."
+  [g [s & rs :as rule]]
+  (-> (mapr (fn [rule*]
               (if (= rule rule*)
                 rule*
-                (mk-rule s (replace-coll rs nt rs*))))
+                (mk-rule (non-terminal rule*)
+                         (replace-coll
+                           rs s (pattern rule*)))))
             g)
       (add-rule rule)))
