@@ -3,8 +3,12 @@
             [cfg.list-util :refer :all]
             [clojure.core.reducers :as r]))
 
+(defn mk-rule
+  "Make a rule with LHS `nt` and RHS `rs`."
+  [nt rs] (vec (list* nt rs)))
+
 (defn- non-term-rules [[s rss]]
-  (map #(->> % (list* s) vec) rss))
+  (map (partial mk-rule s) rss))
 
 (defn- arrow? [x] (= '=> x))
 
@@ -84,7 +88,7 @@
 (defn mapr*
   "Applies a function to every rule in the grammar, preserving the
   non-terminal."
-  [f g] (mapr (fn [[s & rs]] (vec (list* s (f rs)))) g))
+  [f g] (mapr (fn [[s & rs]] (mk-rule s (f rs))) g))
 
 (defn word?
   "Predicate to say whether a derivation is a word."
