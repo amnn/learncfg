@@ -15,3 +15,20 @@
     (let [g (cfg (:S => A) (:T => B) (:U => C))]
       (is (= (merge-nts g :S :T)
              (cfg (:S => A | B) (:U => C)))))))
+
+(deftest extract-rule-test
+  (testing "extract-rule"
+    (is (= (cfg (:S => A :T) (:T => B C))
+           (extract-rule (cfg (:S => A B C)) '[:T B C]))))
+
+  (testing "extract-rule multiple instances"
+    (is (= (cfg (:S => A :T | B :T) (:T => B C))
+           (extract-rule (cfg (:S => A B C | B B C)) '[:T B C]))))
+
+  (testing "extract-rule already existing"
+    (is (= (cfg (:S => A :T) (:T => B C))
+           (extract-rule (cfg (:S => A B C) (:T => B C)) '[:T B C]))))
+
+  (testing "extract-rule non-existant"
+    (is (= (cfg (:S => A) (:T => B))
+           (extract-rule (cfg (:S => A)) '[:T B])))))
