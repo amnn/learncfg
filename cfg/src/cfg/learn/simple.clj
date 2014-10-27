@@ -13,7 +13,7 @@
   (let [r1 (g nt1), r2 (g nt2)
         nt-map {nt2 nt1}
         new-nts #(get nt-map % %)]
-    (mapr new-nts
+    (mapr (partial map new-nts)
           (-> (remove-nt g nt2)
               (assoc nt1 (union r1 r2))))))
 

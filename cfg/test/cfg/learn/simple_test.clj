@@ -11,10 +11,16 @@
       (is (= (merge-nts g :T :S)
              (cfg (:T => A | B | C))))))
 
-  (testing "merge-nts unrelated rules"
+  (testing "unrelated rules"
     (let [g (cfg (:S => A) (:T => B) (:U => C))]
       (is (= (merge-nts g :S :T)
-             (cfg (:S => A | B) (:U => C)))))))
+             (cfg (:S => A | B) (:U => C))))))
+
+  (testing "replacing merged nts"
+    (is (= (cfg (:S => :S | A))
+           (merge-nts (cfg (:S => :T)
+                           (:T => A))
+                      :S :T)))))
 
 (deftest extract-rule-test
   (testing "extract-rule"
