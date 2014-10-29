@@ -184,19 +184,6 @@
       (when-let [t (get toks-v i)]
         (= t sym)))))
 
-(defn in-lang
-  "Returns the recogniser function for the grammar `g`."
-  [g]
-  (let [nullable?     (nullable g)
-        g             (null-free g)
-        consume-token (partial token-consumer g nullable?)
-        init-state    (initial-state (nullable? :S))]
-    (fn [toks]
-      (-> (reduce (consume-token (toks->shift? toks))
-                  init-state (range (inc (count toks))))
-          :complete
-          (contains? success-key)))))
-
 (defn deriv-len
   "Returns a function that, given a sequence of tokens, returns the length of
   the derivation of the grammar `g` that produces that sequence, if such a
@@ -217,6 +204,12 @@
           ;; DONE -> S rule we add to the grammar to simplify dealing with
           ;; S -> ε rules.
           (dec len))))))
+
+(defn in-lang
+  "Returns the recogniser function for the grammar `g`. A grammar recognises
+  a sequence of tokens if there is a non-nil derivation length for that
+  sequence."
+  [g] (comp some? (deriv-len g)))
 
 (defn lang-seq
   "Returns an infinite sequence of strings in the language defined by the
