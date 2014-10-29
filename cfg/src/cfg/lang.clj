@@ -5,11 +5,11 @@
             [cfg.list-util :refer [queue]]))
 
 (defrecord ^:private Item
-  [rule start offset toks])
+  [rule start offset deriv-len toks])
 
 (defn- new-item
   "Constructs a fresh Earley Item for a rule `r` starting at `start`"
-  [r start] (->Item r start 0 []))
+  [r start] (->Item r start 0 1 []))
 
 (defn- init-items
   "Create a sequence of new Earley Items for a non-terminal `nt` and grammar
@@ -37,6 +37,12 @@
   one."
   [i] ((juxt :start non-terminal) i))
 
+(defn- processed-key
+  "If the rule, starting position, offset and tokens consumed are the same
+  between items being processed in a single iteration, then they are the same
+  item, and one can be pruned."
+  [i] ((juxt :rule :start :offset :toks) i))
+
 (defn- next-sym
   "Get the next symbol in the item."
   [{:keys [rule offset]}]
@@ -52,6 +58,10 @@
                     (reduce conj %1 %2)
                     (conj %1 %2))
                  toks)))
+
+(defn- inc-deriv-len
+  "Add the given value to the derivation length of an Earley Item."
+  [item len] (update-in item [:deriv-len] + len))
 
 (defrecord ^:private EarleyState
   [reduxns items complete])
@@ -84,9 +94,11 @@
   "Creates a sequence of all the waiting reductions after they have been
   reduced. by the given finished `item`."
   [state item]
-  (let [toks (:toks item)]
-    (map #(shift % toks)
-         (get-in state [:reduxns (reduxn-key item)]))))
+  (let [path [:reduxns (reduxn-key item)]
+        {:keys [toks deriv-len]} item]
+    (map #(-> % (shift toks)
+              (inc-deriv-len deriv-len))
+         (get-in state path))))
 
 (defn- associate-reduxn
   "Add an `item` as waiting for a reduction (keyed by `r-key`) in the parser
@@ -101,10 +113,10 @@
   "Mark an item as completed in the given `state`."
   [state item]
   (let [path [:complete (reduxn-key item)]
-        toks (:toks item)]
+        {:keys [toks deriv-len]} item]
     (if (get-in state path)
-      (update-in state path conj toks)
-      (assoc-in  state path #{toks}))))
+      (update-in state path conj [toks deriv-len])
+      (assoc-in  state path {toks deriv-len}))))
 
 (defn- reset-state
   "Reset the completions and item queue of the state, ready to consume the
@@ -129,13 +141,14 @@
     (loop [processed? #{}, items items
            state (reset-state state)]
       (if (seq items)
-        (let [item (peek items)]
-          (if (processed? item)
+        (let [item (peek items)
+              p-key (processed-key item)]
+          (if (processed? p-key)
             (recur processed? (pop items) state)
             (case (classify item)
 
               :shift
-              (recur (conj processed? item)
+              (recur (conj processed? p-key)
                      (pop items)
                      (let [tok (next-sym item)]
                        (if (shift? index tok)
@@ -143,7 +156,7 @@
                          state)))
 
               :reduce
-              (recur (conj processed? item)
+              (recur (conj processed? p-key)
                      (into (pop items)
                            (perform-reduxns state item))
                      (complete-item state item))
@@ -152,10 +165,11 @@
               (let [nt         (next-sym item), r-key [index nt]
                     predicted? (contains? (:reduxns state) r-key)
                     items      (pop (if (nullable? nt)
-                                      (perform-shift items item [])
+                                      (let [item* (inc-deriv-len item 1)]
+                                        (perform-shift items item* []))
                                       items))]
                 (recur
-                  (conj processed? item)
+                  (conj processed? p-key)
                   (if predicted?
                     items
                     (into items (init-items g nt index)))
@@ -183,6 +197,27 @@
           :complete
           (contains? success-key)))))
 
+(defn deriv-len
+  "Returns a function that, given a sequence of tokens, returns the length of
+  the derivation of the grammar `g` that produces that sequence, if such a
+  sequence exists. Otherwise, returns nil."
+  [g]
+  (let [nullable?     (nullable g)
+        g             (null-free g)
+        consume-token (partial token-consumer g nullable?)
+        init-state    (initial-state (nullable? :S))]
+    (fn [toks]
+      ;; Incrementing (count toks) because completion steps for the kth token
+      ;; occur whilst processing the (k+1)th.
+      (let [index-range    (-> toks count inc range)
+            token-consumer (consume-token (toks->shift? toks))
+            final-state    (reduce token-consumer init-state index-range)]
+        (when-let [len (get-in final-state [:complete success-key toks])]
+          ;; Decrementing the length so that we account for the nominal
+          ;; DONE -> S rule we add to the grammar to simplify dealing with
+          ;; S -> ε rules.
+          (dec len))))))
+
 (defn lang-seq
   "Returns an infinite sequence of strings in the language defined by the
   grammar `g`."
@@ -192,4 +227,5 @@
         consume-token (token-consumer g nullable? (constantly true))
         init-state    (initial-state (nullable? :S))]
     (->> (reductions consume-token init-state (range))
-         rest (mapcat #(get-in % [:complete success-key])))))
+         rest (mapcat #(get-in % [:complete success-key]))
+         (map first))))
