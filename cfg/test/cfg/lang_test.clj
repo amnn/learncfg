@@ -3,6 +3,53 @@
             [cfg.cfg :refer :all]
             [cfg.lang :refer :all]))
 
+(deftest deriv-len-test
+  (testing "left recursion"
+    (let [dl (deriv-len (cfg (:S => :S A | )))]
+      (are [n w] (= n (dl w))
+           1 '[]
+           2 '[A]
+           3 '[A A])))
+
+  (testing "no such derivation"
+    (let [dl (deriv-len (cfg (:S => :S A | )))]
+      (are [w] (nil? (dl w))
+           '[B] '[A B] '[B A])))
+
+  (testing "right recursion"
+    (let [dl (deriv-len (cfg (:S => A :S | )))]
+      (are [n w] (= n (dl w))
+           1 '[]
+           2 '[A]
+           3 '[A A])))
+
+  (testing "product rules"
+    (let [dl (deriv-len (cfg (:S => A :S B :S | )))]
+      (are [n w] (= n (dl w))
+           1 '[]
+           3 '[A B]
+           5 '[A A B B]
+           5 '[A B A B])
+
+      (are [w] (nil? (dl w))
+           '[A] '[B] '[B A] '[A A B] '[A B B] '[B A B])))
+
+  (testing "ambiguous gramamrs"
+    (let [dl (deriv-len (cfg (:S => :S :S | A :S B | )))]
+      (are [n w] (= n (dl w))
+           1 '[]
+           2 '[A B]
+           3 '[A A B B]
+           5 '[A B A B])
+
+      (are [w] (nil? (dl w))
+           '[A] '[B] '[B A] '[A A B] '[A B B] '[B A B])))
+
+  (testing "empty grammar"
+    (let [dl (deriv-len (cfg (:S => )))]
+      (is (= 1 (dl [])))
+      (is (nil? (dl '[A]))))))
+
 (deftest in-lang-test
   (testing "left recursion"
     (let [in-lang? (in-lang (cfg (:S => :S A | )))]
