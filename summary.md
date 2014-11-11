@@ -43,7 +43,8 @@ $$
   \Leftrightarrow A \Rightarrow^* \alpha B \gamma
 $$
 
-Which is exactly the definition of an NTS language as used in [Clark2006] below.
+Which is exactly the definition of an NTS language as used in [Clark06]
+below.
 
 An additional restriction of this algorithm is that we cannot provide negative
 examples to deal with underfitting. We rely on the fact that the operations do
@@ -97,7 +98,7 @@ respective operations on all pairs of non-terminals and substrings in rules
 respectively until all such operations yield no better potential grammars.
 
 At each stage, the set of potential grammars is limited in size to the beam
-width $B = 3$.
+width $b = 3$.
 
 The cost function here rewards compactly defined grammars with short derivation
 trees for the positive samples given. Such a grammar represents a good
@@ -195,6 +196,72 @@ Additionally, any procedures handled by the oracle/teacher are starred.
   {\small Clark, 2006}}
 
 ### Restrictions
+As well as the NTS restriction as found (implicitly) in [Langley00], there is
+a restriction that the target language be unambiguous.
+
+Additionally, in inspecting the algorithm, we see that it produces rules in
+Chomsky normal form. Whilst this does not affect the expressibility, it could
+have implications on real world performance.
+
+Furthermore, the polynomial bounds this algorithm guarantees rely on the
+samples given to it coming from a probabilistic context-free grammar based
+on the target language.
+
+### Definitions
+
+\begin{align*}
+\cdot \sqsubseteq \cdot &\eqdef \text{substring relation} \\
+L _ \infty(F) &\eqdef \max _ {x \in X}{|F(x)|} \text{, for function $F$, countable set $X$.} \\
+[w] &\eqdef \text{component containing $w$ in $(U,E)$ (see algorithm)} \\
+\mu_3 & = \frac{\nu\mu_2}{16}
+\end{align*}
 
 ### Algorithm
 
+Intuitively, the algorithm finds commonly occurring substrings in the sample
+set, and the contexts they occur in. Then, produces a graph with edges between
+substrings that appear in similar contexts. From this graph, we create the
+grammar:
+
+ * Each connected component in the graph is considered to be a
+   non-terminal
+ * A rule is added for every member of the terminal alphabet
+ * For every substring $w \in U$ we find, we add a rule for each splitting of
+   $w = uv$ from its component $[w]$ to the components of the splitting
+   $[u][v]$.
+ * The starting non-terminals are precisely the components of the strings in
+   the sample set.
+
+\begin{algorithm}
+\caption{\textbf{PACCFG} algorithm}
+\begin{algorithmic}
+\Function{Learn}{$W$, $m_0$, $\nu$, $\mu_2$, $\Sigma$}
+  \LineComment{\textbf{input} $W$ a set of positive examples}
+  \LineComment{\textbf{input} $m_0$, $\nu$, $\mu_2$ paramaters for the PAC algorithm}
+  \LineComment{\textbf{input} $\Sigma$ the terminal alphabet}
+  \LineComment{\textbf{output} $\hat{G}$ the grammar}
+  \State
+  \State $U \gets \{u \in \Sigma^+ : |\{w_i:u\sqsubseteq w_i\}| \geq m_0\}$
+  \ForAll{$u \in U$}
+    \State $C_u \gets \emptyset$
+    \ForAll{$w_i \in W$}
+      \If{$u \sqsubseteq w_i$}
+        \ForAll{$l, r : lur = w_i$}
+          \State $C_u \gets C_u \cup \{(l,r)\}$
+        \EndFor
+      \EndIf
+    \EndFor
+  \EndFor
+  \State
+  \State $U_c \gets \{u \in U : L _ \infty(\hat{C _ u}) > \frac{\mu_2}{2}\}$
+  \State $E \gets \{(u_i,u_j) \in U _ c^2 :
+                    L_\infty(\hat{C_{u_i}} - \hat{C_{u_j}}) < 2\mu_3 \}$
+  \State $\hat{V} \gets \text{the connected components of graph} (U,E)$
+  \State $\hat{P} \gets \{[\alpha] \rightarrow \alpha : \alpha \in \Sigma\} \cup
+                        \{[w] \rightarrow [u][v] : w \in U, w = uv\}$
+  \State $\hat{S} \gets \{[w] : w \in W\}$
+  \State
+  \State \Return{$(\Sigma, \hat{V}, \hat{P}, \hat{S})$}
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
