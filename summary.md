@@ -99,12 +99,9 @@ until all such operations yield no better potential grammars.
 At each stage, the set of potential grammars is limited in size to the beam
 width $B = 3$.
 
-\subsection{A method for inferring context-free grammars\\
-  {\small Knobe \& Knobe, 1976}}
-
-### Restrictions
-
-### Algorithm
+The cost function here rewards compactly defined grammars with short derivation
+trees for the positive samples given. Such a grammar represents a good
+generalisation of the sample given.
 
 \subsection{Learning k-bounded context-free grammars\\
   {\small Angluin, 1987}}
