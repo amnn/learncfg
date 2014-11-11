@@ -93,8 +93,8 @@ not "generalise too much".
 \end{algorithm}
 
 The _MERGE_ and _EXTRACT_ methods used in _LEARN_ repeatedly perform their
-respective operations on all pairs of non-terminals and substrings respectively
-until all such operations yield no better potential grammars.
+respective operations on all pairs of non-terminals and substrings in rules
+respectively until all such operations yield no better potential grammars.
 
 At each stage, the set of potential grammars is limited in size to the beam
 width $B = 3$.
