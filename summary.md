@@ -49,8 +49,6 @@ An additional restriction of this algorithm is that we cannot provide negative
 examples to deal with underfitting. We rely on the fact that the operations do
 not "generalise too much".
 
-### Algorithm
-
 \begin{algorithm}
 \caption{Learning with a simplicity bias}
 \begin{algorithmic}
@@ -71,7 +69,7 @@ not "generalise too much".
   \EndWhile
 
   \State
-  \State \Return $\min_{P \in \mathcal{P}}{\{P | \Call{Cost}{P} \}}$
+  \State \Return $\min _ {P \in \mathcal{P}}{\{P | \Call{Cost}{P} \}}$
 \EndFunction
 \end{algorithmic}
 \end{algorithm}
@@ -113,7 +111,88 @@ width $B = 3$.
 
 ### Restrictions
 
+There is only one restriction on the context-free grammars in this algorithm,
+and that is that they must be _k-bounded_. A grammar
+$G = (\Sigma, V, \mathcal{P}, S)$ is _k-bounded_ if for all
+$(A \rightarrow \gamma) \in \mathcal{P}$ there are at most $k$ non-terminals
+in $\gamma$.
+
+This algorithm is restricted further, however, by its requirements of the
+teacher. The teacher must be able to perform the following queries (In each
+case, the teacher either returns _yes_ or provides a counter-example):
+
+ * **Non-terminal Membership**, for a given $w \in \Sigma^{ * }$ and $A \in V$,
+   does $A \Rightarrow^{ * } w$ hold?
+ * **Equivalence** Given a grammar $G^\prime$ is $L(G) = L(G^\prime)$?
+
+The last query in particular poses a difficulty in that it is not a decidable
+problem, although the paper suggests altering the algorithm to uses a form of
+probabilistic equivalence to get around this issue.
+
 ### Algorithm
+
+In the algorithm, _PARSE_ returns the parse tree of a grammar for a given
+word.
+
+Additionally, any procedures handled by the oracle/teacher are starred.
+
+\begin{algorithm}
+\caption{Learning k-bounded grammars}
+\begin{algorithmic}
+\Function{Learn}{}
+  \State $P^\prime \gets \emptyset$
+  \While{$\lnot\Call{Equal$^\ast$}{P^\prime}$}
+    \State $w^\prime \gets \Call{Counter-example$^\ast$}{}$
+    \If {$w^\prime \in L(G^\prime)$}
+      \State $tree \gets \Call{Parse}{G^\prime, w^\prime}$
+      \State $P \gets P - \{\Call{Diagnose}{tree}\}$
+    \Else
+      \State $P \gets P \cup \Call{Candidate}{w^\prime}$
+    \EndIf
+  \EndWhile
+  \State \Return $G^\prime$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{Diagnose a bad parse}
+\begin{algorithmic}
+\Function{Diagnose}{T}
+  \LineComment{\textbf{input} A parse tree, for a false-positive string.}
+  \LineComment{\textbf{output} A bad production in $G^\prime$}
+  \ForAll{children $(T^\prime, x)$ of $T$}
+    \If {$\lnot\Call{Member$^\ast$}{T^\prime, x}$}
+      \Comment{is the child bad?}
+      \State \Return $\Call{Diagnose}{T^\prime}$
+    \EndIf
+  \EndFor
+
+  \State \Return $T$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{Candidate rules for generating the missing string.}
+\begin{algorithmic}
+\Function{Candidate}{w}
+  \LineComment{\textbf{input} A string not currently in $L(G^\prime)$}
+  \LineComment{\textbf{output} A set of candidate productions}
+  \State $C \gets \emptyset$
+  \ForAll{substring $y$ of $w$}
+    \For{$m = 0 \ldots k$}
+      \ForAll{$y = x_0y_0 \ldots x_my_mx_{m+1}$}
+        \ForAll{$(A, A_0,\ldots,A_m) \in V^{m+1}$}
+          \State $C \gets C \cup \{A \rightarrow x_0A_0 \ldots x_mA_mx_{m+1}\}$
+        \EndFor
+      \EndFor
+    \EndFor
+  \EndFor
+  \State \Return $C$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
 
 \subsection{PAC-Learning Unambiguous NTS Languages\\
   {\small Clark, 2006}}
@@ -122,9 +201,3 @@ width $B = 3$.
 
 ### Algorithm
 
-\subsection{Efficient learning of context-free grammars from positive structural examples\\
-  {\small Sakakibara, 1992}}
-
-### Restrictions
-
-### Algorithm
