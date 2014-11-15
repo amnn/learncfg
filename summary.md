@@ -16,8 +16,8 @@ $S \rightarrow w$, for all $w$ in the sample, we produce successively more
 general grammars, stopping when the grammar cannot be made more general (using
 the operations described below).
 
-The heuristic driven search is a beam search, with beam $b$ (where $b = 3$ in
-the original paper), with a heuristic of description length of the
+The heuristic driven search is a beam search, with beam width $b$ (where
+$b = 3$ in the original paper), and a heuristic of description length of the
 grammar, as well as the length of the derivations of the sample in that
 grammar.
 
@@ -25,10 +25,12 @@ At each iteration, the algorithm applies one of two operations: _MERGE_ or
 _EXTRACT_, both of which increase the size of the language.
 
  * _MERGE_ takes two non-terminals, and combines them into one, with the rules
-   of both.
+   of both. Replacing instances of both non-terminals with that of the new
+   one.
  * _EXTRACT_ takes a sequence that appears multiple times in the right hand
    sides of the rules of the grammar, and creates a new non-terminal mapping
-   to that sequence.
+   to that sequence. Replacing the sequences in the right-hand sides of the
+   existing rules with the new non-terminal.
 
 ### Restrictions
 
@@ -178,7 +180,7 @@ Additionally, any procedures handled by the oracle/teacher are starred.
   \LineComment{\textbf{input} A string not currently in $L(G^\prime)$}
   \LineComment{\textbf{output} A set of candidate productions}
   \State $C \gets \emptyset$
-  \ForAll{substring $y$ of $w$}
+  \ForAll{substrings $y$ of $w$}
     \For{$m = 0 \ldots k$}
       \ForAll{$y = x_0y_0 \ldots x_my_mx_{m+1}$}
         \ForAll{$(A, A_0,\ldots,A_m) \in V^{m+1}$}
@@ -213,6 +215,7 @@ on the target language.
 \cdot \sqsubseteq \cdot &\eqdef \text{substring relation} \\
 L _ \infty(F) &\eqdef \max _ {x \in X}{|F(x)|} \text{, for function $F$, countable set $X$.} \\
 [w] &\eqdef \text{component containing $w$ in $(U,E)$ (see algorithm)} \\
+\hat{C_u} &\eqdef \text{multiset of contexts containing $u$.} \\
 \mu_3 & = \frac{\nu\mu_2}{16}
 \end{align*}
 
@@ -243,11 +246,11 @@ grammar:
   \State
   \State $U \gets \{u \in \Sigma^+ : |\{w_i:u\sqsubseteq w_i\}| \geq m_0\}$
   \ForAll{$u \in U$}
-    \State $C_u \gets \emptyset$
+    \State $\hat{C_u} \gets \emptyset$
     \ForAll{$w_i \in W$}
       \If{$u \sqsubseteq w_i$}
         \ForAll{$l, r : lur = w_i$}
-          \State $C_u \gets C_u \cup \{(l,r)\}$
+          \State $\hat{C_u} \gets \hat{C_u} \cup \{(l,r)\}$
         \EndFor
       \EndIf
     \EndFor
@@ -256,7 +259,7 @@ grammar:
   \State $U_c \gets \{u \in U : L _ \infty(\hat{C _ u}) > \frac{\mu_2}{2}\}$
   \State $E \gets \{(u_i,u_j) \in U _ c^2 :
                     L_\infty(\hat{C_{u_i}} - \hat{C_{u_j}}) < 2\mu_3 \}$
-  \State $\hat{V} \gets \text{the connected components of graph} (U,E)$
+  \State $\hat{V} \gets \text{the connected components of graph } (U,E)$
   \State $\hat{P} \gets \{[\alpha] \rightarrow \alpha : \alpha \in \Sigma\} \cup
                         \{[w] \rightarrow [u][v] : w \in U, w = uv\}$
   \State $\hat{S} \gets \{[w] : w \in W\}$
