@@ -106,3 +106,24 @@
     (let [ws (take 4 (lang-seq (cfg (:S => :S :S | A :S B | ))))]
       (is (every? '#{[] [A B] [A B A B] [A A B B]} ws))
       (is (= 4 (count (into #{} ws)))))))
+
+(deftest parse-tree-test
+  (testing "left recursion"
+    (let [g (cfg (:S => :A :S | A)
+                 (:A => A))]
+      (is (= '[[:S A] [A] []]
+             (parse-tree g '[A])))
+
+      (is (= '[[:S :A :S] [A A] [[[:A A] [A] []]
+                                 [[:S A] [A] []]]]
+             (parse-tree g '[A A])))))
+
+  (testing "right recursion"
+    (let [g (cfg (:S => :S :A | A)
+                 (:A => A))]
+      (is (= '[[:S A] [A] []]
+             (parse-tree g '[A])))
+
+      (is (= '[[:S :S :A] [A A] [[[:S A] [A] []]
+                                 [[:A A] [A] []]]]
+             (parse-tree g '[A A]))))))
