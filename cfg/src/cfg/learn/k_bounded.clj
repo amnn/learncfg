@@ -1,5 +1,6 @@
 (ns cfg.learn.k-bounded
   (:require [clojure.set :refer [union]]
+            [clojure.string :refer [join]]
             [cfg.learn.util :refer :all]
             [cfg.lang :refer [parse-tree]]
             [cfg.cfg :refer [cfg add-rule remove-rule
@@ -68,9 +69,9 @@
   "A form of the `counter*` predicate used in the learning algorithm that
   asks for its response from the user."
   [g]
-  (println "Is this the correct grammar?")
+  (println "Correct?")
   (println (show-cfg g))
-  (print   "Leave blank for yes, give a counter-example for no: ")
+  (print   "Blank for yes, Counter-example for no: ")
   (flush)
   (let [input (read-line)]
     (println)
@@ -82,13 +83,9 @@
   "A form of the `member*` predicate used by the k-bounded learning algorithm
   that poses the question to the user "
   [nt yield]
-  (println "In the grammar you are thinking of, can you yield: ")
-  (println yield)
-  (print   (str "From the non-terminal '" nt "'? Yes/No: "))
+  (print (str nt " =>* " (join \space yield) "? Y/N: "))
   (flush)
-  (let [yes? (#{\y \Y} (first (read-line)))]
-    (println)
-    yes?))
+  (#{\y \Y} (first (read-line))))
 
 (def interactive-learn
   ^{:doc "A specialisation of the learning algorithm that treats the user as
