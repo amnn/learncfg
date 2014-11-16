@@ -123,3 +123,29 @@
   (testing "non-terminals"
     (is (non-terminal? :A))
     (is (not (non-terminal? 'A)))))
+
+(deftest cnf-leaf?-test
+  (testing "leaf rules"
+    (is (cnf-leaf? '[:S A])))
+
+  (testing "branch rules"
+    (is (not (cnf-leaf? '[:S :A :B]))))
+
+  (testing "empty rules"
+    (is (not (cnf-leaf? '[:S]))))
+
+  (testing "proxy rules"
+    (is (not (cnf-leaf? '[:S :A])))))
+
+(deftest cnf-branch?-test
+  (testing "leaf rules"
+    (is (not (cnf-branch? '[:S A]))))
+
+  (testing "branch rules"
+    (is (cnf-branch? '[:S :A :B])))
+
+  (testing "empty rules"
+    (is (not (cnf-branch? '[:S]))))
+
+  (testing "proxy rules"
+    (is (not (cnf-branch? '[:S :A])))))

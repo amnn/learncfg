@@ -105,6 +105,16 @@
 (def terminal? symbol?)
 (def non-terminal? keyword?)
 
+(defn cnf-leaf?
+  "does the given rule qualify as the leaf rule of a CNF grammar."
+  [[_ & rs]] (and (= 1 (count rs))
+                  (terminal? (first rs))))
+
+(defn cnf-branch?
+  "Does the given rule qualify as the branch rule of a CNF grammar."
+  [[_ & rs]] (and (= 2 (count rs))
+                  (every? non-terminal? rs)))
+
 (defn show-cfg
   "Provides a textual representation of the grammar `g`."
   [g]
