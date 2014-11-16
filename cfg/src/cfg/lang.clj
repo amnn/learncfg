@@ -252,7 +252,7 @@
                     (map (fn [[nt t]] {t #{nt}}))
                     (apply merge-with union))
 
-         subtok   (fn [start len] (subvec toks start (+ start len)))
+         subtok (fn [start len] (subvec toks start (+ start len)))
 
          partials
          {1 (apply merge-with union
