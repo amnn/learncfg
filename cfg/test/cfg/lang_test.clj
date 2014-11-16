@@ -111,6 +111,8 @@
   (testing "left recursion"
     (let [g (cfg (:S => :A :S | A)
                  (:A => A))]
+      (is (= nil (parse-tree g '[B])))
+
       (is (= '[[:S A] [A] []]
              (parse-tree g '[A])))
 
@@ -121,6 +123,8 @@
   (testing "right recursion"
     (let [g (cfg (:S => :S :A | A)
                  (:A => A))]
+      (is (= nil (parse-tree g '[B])))
+
       (is (= '[[:S A] [A] []]
              (parse-tree g '[A])))
 
