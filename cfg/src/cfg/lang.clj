@@ -226,50 +226,54 @@
 
 (defn parse-tree
   "Given a grammar `g` in Chomsky Normal Form(1), and a sequence of tokens,
-  `toks`, returns a derivation tree for `g` recognising `toks` if one exists
-  or `nil` otherwise.
+  `ts`, returns a derivation tree for `g` recognising `ts` if one exists
+  or `nil` otherwise. Optionally, a `root` non-terminal may provided, which
+  will be the non-terminal's whose rules form the root node of the tree. If
+  one if not provided, `:S` is picked by default.
 
   (1) All rules in a CFG in CNF are of the form:
 
-   * A => BC
-   * A => a
+  * A => BC
+  * A => a
 
   For non-terminals `A`, `B`, `C` and terminals `a`."
-  [g ts]
-  (let [toks (vec ts)
-        n    (count toks)
+  ([g ts] (parse-tree g ts :S))
 
-        {branches true, leaves false}
-        (group-by #(every? non-terminal? %)
-                  (rule-seq g))
+  ([g ts root]
+   (let [toks (vec ts)
+         n    (count toks)
 
-        t-map (->> leaves
-                   (map (fn [[nt t]] {t #{nt}}))
-                   (apply merge-with union))
+         {branches true, leaves false}
+         (group-by #(every? non-terminal? %)
+                   (rule-seq g))
 
-        subtok   (fn [start len] (subvec toks start (+ start len)))
+         t-map (->> leaves
+                    (map (fn [[nt t]] {t #{nt}}))
+                    (apply merge-with union))
 
-        partials
-        {1 (apply merge-with union
-                  (for [j (range n)
-                        :let [[t :as yield] (subtok j 1)]]
-                    {j (into {} (for [nt (get t-map t)]
-                                  [nt [[nt t] yield []]]))}))}
+         subtok   (fn [start len] (subvec toks start (+ start len)))
 
-        build-partial
-        (fn [p [i j k r a b c]]
-          (if-let [bt (get-in p [k j b])]
-            (if-let [ct (get-in p [(- i k) (+ j k) c])]
-              (assoc-in p [i j a]
-                        [r (subtok j i)
-                         [bt ct]])
-              p)
-            p))]
+         partials
+         {1 (apply merge-with union
+                   (for [j (range n)
+                         :let [[t :as yield] (subtok j 1)]]
+                     {j (into {} (for [nt (get t-map t)]
+                                   [nt [[nt t] yield []]]))}))}
 
-    (-> (reduce build-partial partials
-                (for [i (range 2 (inc n))         ;; Subsequence length
-                      j (range (- n i -1))        ;; Start position
-                      k (range 1 i)               ;; Split point
-                      [a b c :as r] branches]     ;; Rule
-                  [i j k r a b c]))
-        (get-in [n 0 :S]))))
+         build-partial
+         (fn [p [i j k r a b c]]
+           (if-let [bt (get-in p [k j b])]
+             (if-let [ct (get-in p [(- i k) (+ j k) c])]
+               (assoc-in p [i j a]
+                         [r (subtok j i)
+                          [bt ct]])
+               p)
+             p))]
+
+     (-> (reduce build-partial partials
+                 (for [i (range 2 (inc n))         ;; Subsequence length
+                       j (range (- n i -1))        ;; Start position
+                       k (range 1 i)               ;; Split point
+                       [a b c :as r] branches]     ;; Rule
+                   [i j k r a b c]))
+         (get-in [n 0 root])))))
