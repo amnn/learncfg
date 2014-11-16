@@ -134,4 +134,4 @@
                 (map (fn [nt [_ rs]]
                        (print-rule pad nt rs))
                      key-strs g)
-                ")\n"))))
+                ")"))))
