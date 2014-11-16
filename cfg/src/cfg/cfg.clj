@@ -1,5 +1,6 @@
 (ns cfg.cfg
   (:require [clojure.set :refer [union]]
+            [clojure.string :refer [join]]
             [cfg.list-util :refer :all]
             [clojure.core.reducers :as r]))
 
@@ -103,3 +104,24 @@
 
 (def terminal? symbol?)
 (def non-terminal? keyword?)
+
+(defn show-cfg
+  "Provides a textual representation of the grammar `g`."
+  [g]
+  (letfn [(spaces [n] (repeat n \space))
+          (flat-str [& ss] (apply str (flatten ss)))
+
+          (print-rule [pad nt rs]
+            (let [fmt (str "\n  (%-" pad "s => %s)")
+                  sep (flat-str \newline (spaces (+ pad 4)) "|  ")]
+              (format fmt nt
+                      (->> rs
+                           (map #(join \space %))
+                           (join sep)))))]
+    (let [key-strs (->> g keys (map str))
+          pad      (->> key-strs (map count) (reduce max))]
+      (flat-str "(cfg"
+                (map (fn [nt [_ rs]]
+                       (print-rule pad nt rs))
+                     key-strs g)
+                ")\n"))))

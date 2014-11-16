@@ -237,6 +237,7 @@
   * A => a
 
   For non-terminals `A`, `B`, `C` and terminals `a`."
+
   ([g ts] (parse-tree g ts :S))
 
   ([g ts root]
