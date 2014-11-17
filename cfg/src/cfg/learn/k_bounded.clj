@@ -51,19 +51,20 @@
   with non-terminals in `nts` and rules governed by the responses from queries
   to `counter*` and `member*`."
   [counter* member* nts]
-  (loop [g (init-grammar nts), blacklist #{}]
-    (if-let [c (counter* g)]
-      (if-let [t (parse-tree g c)]
-        (let [bad-rule (diagnose member* t)]
-          (recur (remove-rule g bad-rule)
-                 (if (cnf-leaf? bad-rule)
-                   (conj blacklist bad-rule)
-                   blacklist)))
+  (let [member* (memoize member*)]
+    (loop [g (init-grammar nts), blacklist #{}]
+      (if-let [c (counter* g)]
+        (if-let [t (parse-tree g c)]
+          (let [bad-rule (diagnose member* t)]
+            (recur (remove-rule g bad-rule)
+                   (if (cnf-leaf? bad-rule)
+                     (conj blacklist bad-rule)
+                     blacklist)))
 
-        (let [new-rules (candidate nts blacklist c)]
-          (recur (reduce add-rule g new-rules)
-                 blacklist)))
-      g)))
+          (let [new-rules (candidate nts blacklist c)]
+            (recur (reduce add-rule g new-rules)
+                   blacklist)))
+        g))))
 
 (defn interactive-counter
   "A form of the `counter*` predicate used in the learning algorithm that
