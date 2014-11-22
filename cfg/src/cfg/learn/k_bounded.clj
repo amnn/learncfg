@@ -5,7 +5,7 @@
             [cfg.lang :refer [parse-tree]]
             [cfg.cfg :refer [cfg add-rule remove-rule
                              cnf-leaf? cnf-branch?
-                             show-cfg]]))
+                             prune show-cfg]]))
 
 (defn- diagnose
   "Given a non-terminal membership predicate `member*`, and a parse-tree `t`,
@@ -53,18 +53,19 @@
   [counter* member* nts]
   (let [member* (memoize member*)]
     (loop [g (init-grammar nts), blacklist #{}]
-      (if-let [c (counter* g)]
-        (if-let [t (parse-tree g c)]
-          (let [bad-rule (diagnose member* t)]
-            (recur (remove-rule g bad-rule)
-                   (if (cnf-leaf? bad-rule)
-                     (conj blacklist bad-rule)
-                     blacklist)))
+      (let [pg (prune g)]
+        (if-let [c (counter* pg)]
+          (if-let [t (parse-tree g c)]
+            (let [bad-rule (diagnose member* t)]
+              (recur (remove-rule g bad-rule)
+                     (if (cnf-leaf? bad-rule)
+                       (conj blacklist bad-rule)
+                       blacklist)))
 
-          (let [new-rules (candidate nts blacklist c)]
-            (recur (reduce add-rule g new-rules)
-                   blacklist)))
-        g))))
+            (let [new-rules (candidate nts blacklist c)]
+              (recur (reduce add-rule g new-rules)
+                     blacklist)))
+          pg)))))
 
 (defn interactive-counter
   "A form of the `counter*` predicate used in the learning algorithm that
@@ -82,7 +83,7 @@
 
 (defn interactive-member
   "A form of the `member*` predicate used by the k-bounded learning algorithm
-  that poses the question to the user "
+  that poses the question to the user."
   [nt yield]
   (print (str nt " =>* " (join \space yield) "? Y/N: "))
   (flush)

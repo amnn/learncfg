@@ -179,7 +179,7 @@
                            (map #(join \space %))
                            (join sep)))))]
     (let [key-strs (->> g keys (map str))
-          pad      (->> key-strs (map count) (reduce max))]
+          pad      (->> key-strs (map count) (reduce max 0))]
       (flat-str "(cfg"
                 (map (fn [nt [_ rs]]
                        (print-rule pad nt rs))
