@@ -229,7 +229,7 @@
   `ts`, returns a derivation tree for `g` recognising `ts` if one exists
   or `nil` otherwise. Optionally, a `root` non-terminal may provided, which
   will be the non-terminal's whose rules form the root node of the tree. If
-  one if not provided, `:S` is picked by default.
+  one is not provided, `:S` is picked by default.
 
   (1) All rules in a CFG in CNF are of the form:
 

@@ -2,14 +2,42 @@
   (:require [clojure.set :refer [union]]
             [clojure.string :refer [join]]
             [cfg.list-util :refer :all]
+            [cfg.sat :refer [horn-sat]]
             [clojure.core.reducers :as r]))
+
+;;;;;;;;;; Predicates ;;;;;;;;;;
+
+(defn word?
+  "Predicate to say whether a derivation is a word."
+  [s] (every? symbol? s))
+
+(defn not-word?
+  "Complement of `word?`"
+  [s] (not-every? symbol? s))
+
+(def terminal? symbol?)
+(def non-terminal? keyword?)
+
+(defn cnf-leaf?
+  "does the given rule qualify as the leaf rule of a CNF grammar."
+  [[_ & rs]] (and (= 1 (count rs))
+                  (terminal? (first rs))))
+
+(defn cnf-branch?
+  "Does the given rule qualify as the branch rule of a CNF grammar."
+  [[_ & rs]] (and (= 2 (count rs))
+                  (every? non-terminal? rs)))
+
+;;;;;;;;;; Accessors ;;;;;;;;;;
+
+(def ^{:doc "returns the LHS of a rule"} non-terminal first)
+(def ^{:doc "returns the RHS of a rule"} pattern      rest)
+
+;;;;;;;;;; Grammar Creation ;;;;;;;;;;
 
 (defn mk-rule
   "Make a rule with LHS `nt` and RHS `rs`."
   [nt rs] (vec (list* nt rs)))
-
-(def ^{:doc "returns the LHS of a rule"} non-terminal first)
-(def ^{:doc "returns the RHS of a rule"} pattern rest)
 
 (defn- non-term-rules [[s rss]]
   (map (partial mk-rule s) rss))
@@ -59,14 +87,14 @@
          (not-any? #{'|} rs)]}
   `'[~s ~@rs])
 
+(defn clean-cfg
+  "Ensure there are no empty non-terminals."
+  [g] (into {} (r/remove (comp empty? #(nth % 1)) g)))
+
 (defn add-rule
   "Add a singleton rule `s => rs` to the grammar represented by `g`."
   [g [s & rs]]
   (update-in g [s] union #{(vec rs)}))
-
-(defn clean-cfg
-  "Ensure there are no empty non-terminals."
-  [g] (into {} (r/remove (comp empty? #(nth % 1)) g)))
 
 (defn remove-rule
   "Removes rule `s => rs` from `g` if it exists."
@@ -76,6 +104,8 @@
 (defn remove-nt
   "Remove a non-terminal `nt` from grammar `g`"
   [g nt] (dissoc g nt))
+
+;;;;;;;;;; Rule Traversal ;;;;;;;;;;
 
 (defn rule-seq
   "Produces a lazy sequences of rules in `g`, each of the form `[~s, ~@rs] for
@@ -94,31 +124,51 @@
   non-terminal."
   [f g] (mapr (fn [[s & rs]] (mk-rule s (f rs))) g))
 
-(defn word?
-  "Predicate to say whether a derivation is a word."
-  [s] (every? symbol? s))
+(defn filterr
+  "Filters the rules in a context free grammar according to a predicate `pred`
+  to return a new grammar."
+  [pred g] (reduce add-rule {} (filter pred (rule-seq g))))
 
-(defn not-word?
-  "Complement of `word?`"
-  [s] (not-every? symbol? s))
+;;;;;;;;;; CFG Graph Properties ;;;;;;;;;;
 
-(def terminal? symbol?)
-(def non-terminal? keyword?)
+(defn reachable-nts
+  "Returns the non-terminals we can reach from a given symbol `nt`. If `nt` is
+  not provided, it is assumed to be `:S`."
+  ([g] (reachable-nts g :S))
 
-(defn cnf-leaf?
-  "does the given rule qualify as the leaf rule of a CNF grammar."
-  [[_ & rs]] (and (= 1 (count rs))
-                  (terminal? (first rs))))
+  ([g nt]
+   (loop [q   (queue nt)
+          nts (transient #{})]
+     (if (seq q)
+       (let [current-nt (peek q)]
+         (if-not (nts current-nt)
+           (recur (into (pop q)
+                        (->> (get g current-nt)
+                             (mapcat #(filter non-terminal? %))))
+                  (conj! nts current-nt))
+           (recur (pop q) nts)))
+       (persistent! nts)))))
 
-(defn cnf-branch?
-  "Does the given rule qualify as the branch rule of a CNF grammar."
-  [[_ & rs]] (and (= 2 (count rs))
-                  (every? non-terminal? rs)))
+(defn contributing-nts
+  "Returns the non-terminals that can yield strings."
+  [g] (->> g rule-seq horn-sat))
+
+(defn prune
+  "Given a grammar `g`, remove all the rules that do not contribute to the
+  language, and all the rules that are not reachable from the start symbol."
+  [g]
+  (let [cnts         (contributing-nts g)
+        contributes? (partial every? #(or (terminal? %) (cnts %)))
+        g*           (filterr contributes? g)
+        rnts         (reachable-nts g*)]
+    (filterr (comp rnts non-terminal) g*)))
+
+;;;;;;;;;; I/O Helpers ;;;;;;;;;;
 
 (defn show-cfg
   "Provides a textual representation of the grammar `g`."
   [g]
-  (letfn [(spaces [n] (repeat n \space))
+  (letfn [(spaces   [n]    (repeat n \space))
           (flat-str [& ss] (apply str (flatten ss)))
 
           (print-rule [pad nt rs]
