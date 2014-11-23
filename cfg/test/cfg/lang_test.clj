@@ -113,11 +113,12 @@
                  (:A => A))]
       (is (= nil (parse-tree g '[B])))
 
-      (is (= '[[:S A] [A] []]
+      (is (= '[:S [A] #{[[:S A]]}]
              (parse-tree g '[A])))
 
-      (is (= '[[:S :A :S] [A A] [[[:A A] [A] []]
-                                 [[:S A] [A] []]]]
+      (is (= '[:S [A A] #{[[:S :A :S]
+                           [:A [A] #{[[:A A]]}]
+                           [:S [A] #{[[:S A]]}]]}]
              (parse-tree g '[A A])))))
 
   (testing "right recursion"
@@ -125,9 +126,28 @@
                  (:A => A))]
       (is (= nil (parse-tree g '[B])))
 
-      (is (= '[[:S A] [A] []]
+      (is (= '[:S [A] #{[[:S A]]}]
              (parse-tree g '[A])))
 
-      (is (= '[[:S :S :A] [A A] [[[:S A] [A] []]
-                                 [[:A A] [A] []]]]
-             (parse-tree g '[A A]))))))
+      (is (= '[:S [A A] #{[[:S :S :A]
+                           [:S [A] #{[[:S A]]}]
+                           [:A [A] #{[[:A A]]}]]}]
+             (parse-tree g '[A A])))))
+
+  (testing "ambiguous grammar"
+    (let [g (cfg (:S => :S :S | A))]
+      (is (= '[:S [A A A]
+               #{[[:S :S :S]
+                  [:S [A A]
+                   #{[[:S :S :S]
+                      [:S [A] #{[[:S A]]}]
+                      [:S [A] #{[[:S A]]}]]}]
+                  [:S [A] #{[[:S A]]}]]
+
+                 [[:S :S :S]
+                  [:S [A] #{[[:S A]]}]
+                  [:S [A A]
+                   #{[[:S :S :S]
+                      [:S [A] #{[[:S A]]}]
+                      [:S [A] #{[[:S A]]}]]}]]}]
+            (parse-tree g '[A A A]))))))

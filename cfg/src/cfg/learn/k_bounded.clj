@@ -1,6 +1,7 @@
 (ns cfg.learn.k-bounded
   (:require [clojure.set :refer [union]]
             [clojure.string :refer [join]]
+            [cfg.list-util :refer [queue]]
             [cfg.learn.util :refer :all]
             [cfg.lang :refer [parse-tree]]
             [cfg.cfg :refer [cfg add-rule remove-rule
@@ -10,12 +11,22 @@
 (defn- diagnose
   "Given a non-terminal membership predicate `member*`, and a parse-tree `t`,
   return a bad production used in the parse-tree."
-  [member* [rule yield children]]
-  (if-let [bad-child (some (fn [[cr cy :as child]]
-                             (when-not (member* (first cr) cy) child))
-                           children)]
-    (recur member* bad-child)
-    rule))
+  [member* t]
+  (letfn [(consume-child [state [rule & children]]
+            (if-let [bad-child (some (fn [[cr cy :as child]]
+                                       (when-not (member* cr cy) child))
+                                     children)]
+              (update-in state [0] conj  bad-child)
+              (update-in state [1] conj! rule)))]
+    (loop [q         (queue t)
+           bad-rules (transient #{})]
+      (if (seq q)
+        (let [[_ _ children] (peek q)
+              [q* bad-rules*] (reduce consume-child
+                                      [(pop q) bad-rules]
+                                      children)]
+          (recur q* bad-rules*))
+        (persistent! bad-rules)))))
 
 (defn- candidate
   "Given a multimap of non-terminals to terminals they cannot yield (the
@@ -56,11 +67,10 @@
       (let [pg (prune g)]
         (if-let [c (counter* pg)]
           (if-let [t (parse-tree g c)]
-            (let [bad-rule (diagnose member* t)]
-              (recur (remove-rule g bad-rule)
-                     (if (cnf-leaf? bad-rule)
-                       (conj blacklist bad-rule)
-                       blacklist)))
+            (let [bad-rules  (diagnose member* t)
+                  bad-leaves (filter cnf-leaf? bad-rules)]
+              (recur (reduce remove-rule g bad-rules)
+                     (into blacklist bad-leaves)))
 
             (let [new-rules (candidate nts blacklist c)]
               (recur (reduce add-rule g new-rules)

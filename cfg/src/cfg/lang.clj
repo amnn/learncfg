@@ -259,15 +259,15 @@
                    (for [j (range n)
                          :let [[t :as yield] (subtok j 1)]]
                      {j (into {} (for [nt (get t-map t)]
-                                   [nt [[nt t] yield []]]))}))}
+                                   [nt [nt yield #{[[nt t]]}]]))}))}
 
          build-partial
          (fn [p [i j k r a b c]]
-           (if-let [bt (get-in p [k j b])]
-             (if-let [ct (get-in p [(- i k) (+ j k) c])]
-               (assoc-in p [i j a]
-                         [r (subtok j i)
-                          [bt ct]])
+           (if-let     [bt   (get-in p [k j b])]
+             (if-let   [ct   (get-in p [(- i k) (+ j k) c])]
+               (if-let [node (get-in p [i j a])]
+                 (update-in p [i j a 2] union #{[r bt ct]})
+                 (assoc-in  p [i j a] [a (subtok j i) #{[r bt ct]}]))
                p)
              p))]
 
