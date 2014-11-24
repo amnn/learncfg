@@ -105,7 +105,11 @@
   (testing "ambiguous grammar"
     (let [ws (take 4 (lang-seq (cfg (:S => :S :S | A :S B | ))))]
       (is (every? '#{[] [A B] [A B A B] [A A B B]} ws))
-      (is (= 4 (count (into #{} ws)))))))
+      (is (= 4 (count (into #{} ws))))))
+
+  (testing "finite grammars"
+    (is (= '[[A] [B C] [D E F]]
+           (lang-seq (cfg (:S => A | B C | D E F)))))))
 
 (deftest parse-tree-test
   (testing "left recursion"
