@@ -80,19 +80,22 @@
   with non-terminals in `nts` and rules governed by the responses from queries
   to `counter*` and `member*`."
   [member* counter* nts]
-  (let [member* (memoize member*)]
-    (loop [g (init-grammar nts), blacklist #{}]
-      (let [pg (prune-cfg g)]
+  (let [init-g (init-grammar nts)]
+    (loop [g init-g, blacklist #{}
+           member? (memoize member*)]
+      (let [pg (prune g)]
         (if-let [c (counter* pg)]
-          (if-let [t (parse-trees g c)]
-            (let [bad-rules  (diagnose member* t)
+          (if-let [t (parse-tree g c)]
+            (let [bad-rules  (diagnose member? t)
                   bad-leaves (filter cnf-leaf? bad-rules)]
               (recur (reduce remove-rule g bad-rules)
-                     (into blacklist bad-leaves)))
+                     (into blacklist bad-leaves) member?))
 
-            (let [new-rules (candidate nts blacklist c)]
-              (recur (reduce add-rule g new-rules)
-                     blacklist)))
+            (let [new-g (->> (candidate nts blacklist c)
+                             (reduce add-rule g))]
+              (if (parse-tree new-g c)
+                (recur new-g blacklist member?)
+                (recur init-g #{} (memoize member*))))) ;; RESET
           pg)))))
 
 (defn interactive-counter
