@@ -18,15 +18,25 @@
 (def terminal? symbol?)
 (def non-terminal? keyword?)
 
+(defn cnf-leaf*?
+  "Does the given rule qualify as the leaf rule of a CNF grammar."
+  [rs] (and (= 1 (count rs))
+            (terminal? (first rs))))
+
+(defn cnf-branch*?
+  "Does the given rule qualify as the branch rule of a CNF grammar."
+  [rs] (and (= 2 (count rs))
+            (every? non-terminal? rs)))
+
 (defn cnf-leaf?
-  "does the given rule qualify as the leaf rule of a CNF grammar."
-  [[_ & rs]] (and (= 1 (count rs))
-                  (terminal? (first rs))))
+  "Does the given rule (in the format returned by rule-seq) qualify as the
+  leaf rule of a CNF grammar."
+  [[_ & rs]] (cnf-leaf*? rs))
 
 (defn cnf-branch?
-  "Does the given rule qualify as the branch rule of a CNF grammar."
-  [[_ & rs]] (and (= 2 (count rs))
-                  (every? non-terminal? rs)))
+  "Does the given rule (in the format returned by rule-seq) qualify as the
+  branch rule of a CNF grammar."
+  [[_ & rs]] (cnf-branch*? rs))
 
 ;;;;;;;;;; Accessors ;;;;;;;;;;
 
