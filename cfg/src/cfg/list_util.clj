@@ -12,6 +12,12 @@
   ([a b c d & etc]
    (into clojure.lang.PersistentQueue/EMPTY (conj etc d c b a))))
 
+(defn map-v
+  "Map defined over values in key-value pair collections."
+  [f kvps]
+  (zipmap (keys kvps)
+          (->> kvps vals (map f))))
+
 (defn replace-coll
   "Replace all instances of a finite sequence `ys` in a possibly infinite
   sequence `xs` with `z`."
