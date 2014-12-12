@@ -195,3 +195,7 @@
                        (print-rule pad nt rs))
                      key-strs g)
                 ")"))))
+
+(defn pg
+  "CFG Pretty-printer."
+  [g] (println (show-cfg g)))
