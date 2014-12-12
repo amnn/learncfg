@@ -2,4 +2,6 @@
   :description "Implementation of various algorithms for learning context free
                grammars."
   :dependencies [[org.clojure/clojure "1.6.0"]
-                 [bigml/sampling "3.0"]])
+                 [bigml/sampling "3.0"]
+                 [net.mikera/core.matrix "0.31.1"]
+                 [net.mikera/vectorz-clj "0.26.2"]])
