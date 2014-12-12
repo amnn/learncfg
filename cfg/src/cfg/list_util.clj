@@ -1,7 +1,7 @@
 (ns cfg.list-util)
 
 (defn queue
-  "Creates a queue containing the ars."
+  "Creates a queue containing the args."
 
   ([] clojure.lang.PersistentQueue/EMPTY)
   ([a] (conj clojure.lang.PersistentQueue/EMPTY a))
