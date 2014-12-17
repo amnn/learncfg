@@ -12,6 +12,21 @@
            [:T '[B]] 1/2
            [:T '[C]] 1/2))))
 
+(deftest e-graph-test
+  (testing "e-graph"
+    (let [sg '{:S {[:S :S] 1/3
+                   [:A :B] 1/3
+                   [C]     1/3}
+               :A {[A]     1/2
+                   [D]     1/2}
+               :B {[B]     1}}
+          graph (e-graph sg)
+          T     :cfg.scfg/T]
+      (are [r c p] (== p (get-in graph [r c] 0))
+           :S :S 2/3, :S :A 1/3, :S :B 1/3, :S T 1/3
+           :A :S 0,   :A :A 0,   :A :B 0,   :A T 1
+           :B :S 0,   :B :A 0,   :B :B 0,   :B T 1)) ))
+
 (deftest e-system-test
   (testing "e-system"
     (let [sg '{:S {[:S :S] 1/3

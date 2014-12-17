@@ -2,7 +2,7 @@
   (:require [clojure.core.matrix :refer :all]
             [clojure.core.matrix.operators :as m]
             [cfg.list-util :refer [map-v]]
-            [cfg.cfg :refer [cnf-leaf*?]]))
+            [cfg.cfg :refer [terminal?]]))
 
 (defn cfg->scfg
   "Given a CFG `g`, produce an SCFG with the same rules as `g`, and uniform
@@ -14,6 +14,34 @@
              (->> (map #(vector % p) rs)
                   (into {}))))
          g))
+
+(defn e-graph
+  "A sparse adjacency list for the directed graph representation of the
+  expectation system (`e-system`, see below) for an SCFG.
+
+  For an SCFG with `n` non-terminals, the graph contains `n+1` nodes: one for
+  each non-terminal, and a sink node representing all terminals.
+
+  An edge `A -> B` exists between non-terminals `A` and `B` if there exists a
+  rule in `sg` from A to a string containing `B`.
+
+  An edge `A -> B` exists between non-terminal `A` and terminal
+  sink node `::T` if there is a rule in `sg` from `A` to a string containing
+  a terminal.
+
+  Each edge `A -> B` is labeled with the probability of seeing a B after
+  transitioning from A."
+  [sg]
+  (->> sg
+       (map-v (partial
+               reduce
+               (fn [row [rule p]]
+                 (reduce (fn [row sym]
+                           (let [col (if (terminal? sym) ::T sym)
+                                 p*  (get row col 0)]
+                             (assoc row col (+ p p*))))
+                         row rule))
+               {}))))
 
 (defn e-system
   "Given an SCFG `sg` in CNF return a record containing a matrix `:M`, a
@@ -28,28 +56,17 @@
 
   l = M.l + v"
   [sg]
-  (let [order (vec (keys sg))
-        sparse-m
-        (map-v (fn [rs]
-                 (reduce (fn [m [r p]]
-                           (if (cnf-leaf*? r)
-                             (update-in m [:v] + p)
-                             (reduce #(let [path [:M %2]
-                                            p*   (get-in %1 path 0)]
-                                        (assoc-in %1 path (+ p* p)))
-                                     m r)))
-                         {:M {} :v 0}
-                         rs))
-               sg)]
+  (let [order    (vec (keys sg))
+        sparse-m (e-graph sg)]
     {:order order
      :M (array :vectorz
                (for [i order]
                  (for [j order]
-                   (get-in sparse-m [i :M j] 0))))
+                   (get-in sparse-m [i j] 0))))
 
      :v (array :vectorz
                (for [i order]
-                 (get-in sparse-m [i :v])))}))
+                 (get-in sparse-m [i ::T] 0)))}))
 
 (defn strongly-consistent?
   "An SCFG is Strongly Consistent if its expected derivation length is finite.
