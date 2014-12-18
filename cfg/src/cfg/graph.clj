@@ -14,7 +14,7 @@
   "Given a sparse adjacency list of a directed `graph`, return a fn that, when
   given a node, gives the names of nodes that are reachable from it by
   following an edge in the `graph`."
-  [graph] #(->> % graph keys))
+  [graph] #(keys (get graph % {})))
 
 (defn forest-seq
   "Given a graph as a sequence of `nodes` and a function `children`, returns
