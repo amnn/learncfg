@@ -21,3 +21,20 @@
 
   (testing "replace-coll adjacent instances"
     (is (= [\r \r] (replace-coll [2 3] \r [2 3 2 3])))))
+
+(deftest transpose-test
+  (testing "single entry"
+    (is (= {:b {:a 1}}
+           (transpose {:a {:b 1}}))))
+
+  (testing "2 by 2"
+    (is (= {:a {:a 1 :b 3}
+            :b {:a 2 :b 4}}
+           (transpose {:a {:a 1 :b 2}
+                       :b {:a 3 :b 4}}))))
+
+  (testing "sparse 2 by 2"
+    (is (= {:a {:a 1 :b 3}
+            :b {:a 2}}
+           (transpose {:a {:a 1 :b 2}
+                       :b {:a 3}})))))
