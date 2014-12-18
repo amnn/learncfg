@@ -1,4 +1,4 @@
-(ns cfg.list-util)
+(ns cfg.coll-util)
 
 (defn queue
   "Creates a queue containing the args."

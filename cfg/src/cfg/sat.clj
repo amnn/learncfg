@@ -1,7 +1,7 @@
 (ns cfg.sat
   (:require [clojure.set :refer [union]]
             [clojure.core.reducers :as r]
-            [cfg.list-util :refer [queue]]))
+            [cfg.coll-util :refer [queue]]))
 
 (defn- invert-rule [[s & rs]]
   (let [nts (->> rs (filter keyword?) (into #{}))]

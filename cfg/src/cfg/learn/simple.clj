@@ -1,6 +1,6 @@
 (ns cfg.learn.simple
   (:require [clojure.set :refer [union]]
-            [cfg.list-util :refer [replace-coll]]
+            [cfg.coll-util :refer [replace-coll]]
             [cfg.cfg :refer [mapr mk-rule add-rule
                              remove-nt non-terminal pattern]]))
 

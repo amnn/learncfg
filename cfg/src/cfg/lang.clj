@@ -3,7 +3,7 @@
             [clojure.set :refer [union]]
             [clojure.core.reducers :as r]
             [cfg.cfg :refer [add-rule rule-seq terminal? non-terminal?]]
-            [cfg.list-util :refer [queue]]))
+            [cfg.coll-util :refer [queue]]))
 
 (defrecord ^:private Item
   [rule start offset deriv-len toks])

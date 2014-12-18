@@ -1,7 +1,7 @@
 (ns cfg.scfg
   (:require [clojure.core.matrix :refer :all]
             [clojure.core.matrix.operators :as m]
-            [cfg.list-util :refer [map-v]]
+            [cfg.coll-util :refer [map-v]]
             [cfg.cfg :refer [terminal?]]))
 
 (defn cfg->scfg

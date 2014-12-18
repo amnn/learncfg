@@ -2,7 +2,7 @@
   (:require [clojure.set :refer [union]]
             [clojure.string :refer [join]]
             [bigml.sampling.stream :as stream]
-            [cfg.list-util :refer [queue]]
+            [cfg.coll-util :refer [queue]]
             [cfg.learn.util :refer :all]
             [cfg.lang :refer [parse-tree lang-seq in-lang]]
             [cfg.cfg :refer [cfg add-rule remove-rule

@@ -1,7 +1,7 @@
 (ns cfg.cfg
   (:require [clojure.set :refer [union]]
             [clojure.string :refer [join]]
-            [cfg.list-util :refer :all]
+            [cfg.coll-util :refer :all]
             [cfg.sat :refer [horn-sat]]
             [clojure.core.reducers :as r]))
 

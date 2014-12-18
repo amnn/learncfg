@@ -1,6 +1,6 @@
-(ns cfg.list-util-test
+(ns cfg.coll-util-test
   (:require [clojure.test :refer :all]
-            [cfg.list-util :refer :all]))
+            [cfg.coll-util :refer :all]))
 
 (deftest replace-coll-test
   (testing "replace-coll"
