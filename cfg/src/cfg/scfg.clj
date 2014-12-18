@@ -34,14 +34,14 @@
   [sg]
   (->> sg
        (map-v (partial
-               reduce
-               (fn [row [rule p]]
-                 (reduce (fn [row sym]
-                           (let [col (if (terminal? sym) ::T sym)
-                                 p*  (get row col 0)]
-                             (assoc row col (+ p p*))))
-                         row rule))
-               {}))))
+                reduce
+                (fn [row [rule p]]
+                  (reduce (fn [row sym]
+                            (let [col (if (terminal? sym) ::T sym)
+                                  p*  (get row col 0)]
+                              (assoc row col (+ p p*))))
+                          row rule))
+                {}))))
 
 (defn e-system
   "Given an SCFG `sg` in CNF return a record containing a matrix `:M`, a
