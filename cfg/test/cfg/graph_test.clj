@@ -22,42 +22,42 @@
            (transpose {:a {:a 1 :b 2}
                        :b {:a 3}})))))
 
-(let [no-edges {}
-      ne-l->r  (children no-edges)
-      ne-r->l  (children (transpose no-edges))
+(deftest scc-test
+  (let [no-edges {}
+        ne-l->r  (children no-edges)
+        ne-r->l  (children (transpose no-edges))
 
-      ;;   a
-      ;;   .
-      ;;  / \
-      ;; .   .
-      ;; b   c
+        ;;   a
+        ;;   .
+        ;;  / \
+        ;; .   .
+        ;; b   c
 
-      tree   {:a {:b true :c true}}
-      t-l->r (children tree)
-      t-r->l (children (transpose tree))
+        tree   {:a {:b true :c true}}
+        t-l->r (children tree)
+        t-r->l (children (transpose tree))
 
-      cyclic {:a {:b true} :b {:a true}}
-      c-l->r (children cyclic)
-      c-r->l (children (transpose cyclic))
+        cyclic {:a {:b true} :b {:a true}}
+        c-l->r (children cyclic)
+        c-r->l (children (transpose cyclic))
 
-      ;;    . a   e
-      ;;   /  .   .
-      ;;  |  / \ / \
-      ;;  | .b  .d  .f
-      ;;  |/     \ /
-      ;;  .       .
-      ;;  c       g
+        ;;    . a   e
+        ;;   /  .   .
+        ;;  |  / \ / \
+        ;;  | .b  .d  .f
+        ;;  |/     \ /
+        ;;  .       .
+        ;;  c       g
 
-      merged-tree {:a {:b :d}
-                   :b {:c true}
-                   :c {:a true}
-                   :d {:g true}
-                   :e {:d true :f true}
-                   :f {:g true}}
-      mt-l->r (children merged-tree)
-      mt-r->l (children (transpose merged-tree))]
+        merged-tree {:a {:b :d}
+                     :b {:c true}
+                     :c {:a true}
+                     :d {:g true}
+                     :e {:d true :f true}
+                     :f {:g true}}
+        mt-l->r (children merged-tree)
+        mt-r->l (children (transpose merged-tree))]
 
-  (deftest scc-test
     (letfn [(disorder [xss]
               (->> xss
                    (map #(into #{} %))
