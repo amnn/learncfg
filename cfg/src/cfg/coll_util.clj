@@ -4,13 +4,14 @@
   "Creates a queue containing the args."
 
   ([] clojure.lang.PersistentQueue/EMPTY)
-  ([a] (conj clojure.lang.PersistentQueue/EMPTY a))
-  ([a b] (conj clojure.lang.PersistentQueue/EMPTY a b))
-  ([a b c] (conj clojure.lang.PersistentQueue/EMPTY a b c))
-  ([a b c d] (conj clojure.lang.PersistentQueue/EMPTY a b c d))
+
+  ([a]       (conj (queue) a))
+  ([a b]     (conj (queue) a b))
+  ([a b c]   (conj (queue) a b c))
+  ([a b c d] (conj (queue) a b c d))
 
   ([a b c d & etc]
-   (into clojure.lang.PersistentQueue/EMPTY (conj etc d c b a))))
+   (into (queue a b c d) etc)))
 
 (defn map-v
   "Map defined over values in key-value pair collections."
