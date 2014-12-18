@@ -33,11 +33,3 @@
              (cons (first xs) (replace* (rest xs)))))))))
 
   ([ys z xs] ((replace-coll ys z) xs)))
-
-(defn transpose
-  "Given a two-level nested map, swap the order of nesting."
-  [xss]
-  (reduce (partial merge-with merge)
-          (for [[sym xs] xss
-                [k   v]  xs]
-            {k {sym v}})))
