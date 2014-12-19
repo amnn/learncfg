@@ -2,6 +2,38 @@
   (:require [clojure.test :refer :all]
             [cfg.coll-util :refer :all]))
 
+(deftest map-v-test
+  (testing "empty map"
+    (is (= {} (map-v identity {}))))
+
+  (testing "identity map"
+    (let [m {:a :b, :c :d}]
+      (is (= m (map-v identity m)))))
+
+  (testing "applying the function"
+    (is (= {:a 1, :b 2}
+           (map-v inc {:a 0, :b 1})))))
+
+(deftest map-kv-test
+  (testing "empty map"
+    (is (= {} (map-kv vector {}))))
+
+  (testing "identity map"
+    (is (= {:a :b, :c :d}
+           (map-kv vector {:a :b, :c :d}))))
+
+  (testing "applying the function"
+    (is (= {1 2, 3 4}
+           (map-kv (fn [k v]
+                     [(inc k) (inc v)])
+                   {0 1, 2 3}))))
+
+  (testing "duplicated keys"
+    (is (= {:a 1}
+           (map-kv (fn [k v] [:a 1])
+                   {:a 1, :b 2, :c 3})))))
+
+
 (deftest replace-coll-test
   (testing "replace-coll"
     (is (= (replace-coll [2 3] \r [1 2 3])

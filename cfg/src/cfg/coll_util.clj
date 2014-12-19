@@ -19,6 +19,15 @@
   (zipmap (keys kvps)
           (->> kvps vals (map f))))
 
+(defn map-kv
+  "Map defined over keys and values in key-value pair collections.
+  The fn `f` must take two arguments (a key and value), and return a pair."
+  [f kvps]
+  (reduce-kv (fn [coll k v]
+               (apply assoc coll (f k v)))
+             (empty kvps)
+             kvps))
+
 (defn replace-coll
   "Replace all instances of a finite sequence `ys` in a possibly infinite
   sequence `xs` with `z`."
