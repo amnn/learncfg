@@ -1,19 +1,51 @@
 (ns cfg.scfg
-  (:require [clojure.core.matrix :refer :all]
+  (:require [clojure.core.matrix :refer [array inverse mmul identity-matrix]]
             [clojure.core.matrix.operators :as m]
-            [cfg.coll-util :refer [map-v]]
-            [cfg.cfg :refer [terminal?]]))
+            [bigml.sampling.simple :as simple]
+            [cfg.coll-util :refer [map-v map-kv]]
+            [cfg.hop :refer [best-rules]]
+            [cfg.graph :refer [transpose children scc]]
+            [cfg.cfg :refer [rule-seq terminal? non-terminal?]]))
 
 (defn cfg->scfg
   "Given a CFG `g`, produce an SCFG with the same rules as `g`, and uniform
   probabilities. `g` must be well-formed. i.e. All its non-terminals must
-  posess atleast one rule."
+  possess atleast one rule."
   [g]
   (map-v (fn [rs]
            (let [p (->> (count rs) (/ 1) double)]
              (->> (map #(vector % p) rs)
                   (into {}))))
          g))
+
+(defn scfg->cfg
+  "Given an SCFG `sg`, produce a CFG with the same rules as `g`."
+  [sg] (map-v (comp #(into #{} %) keys) sg))
+
+(defn rule-p
+  "Given an SCFG `sg` and a rule return its associated probability, or `nil`
+  if it doesn't exist."
+  [sg [lhs & rhs]] (get-in sg [lhs rhs]))
+
+(defn sample
+  "Given an SCFG `sg`, returns a string generated according to its
+  distribution. Rooted at a sequence `deriv`, which defaults to `[:S]`."
+  ([sg] (sample sg [:S]))
+
+  ([sg deriv]
+   (if (every? terminal? deriv)
+     deriv
+     (letfn [(pick-rule [nt]
+               (let [rules (get sg nt {})]
+                 (first
+                   (simple/sample (keys rules)
+                                  :weigh rules))))]
+       (->> deriv
+            (map #(cond-> %
+                    (non-terminal? %)
+                    pick-rule))
+            flatten vec
+            (recur sg))))))
 
 (defn e-graph
   "A sparse adjacency list for the directed graph representation of the
@@ -84,3 +116,85 @@
       (when-let [inv (inverse (m/- I M))]
         (->> (mmul inv v)
              (every? pos?))))))
+
+(defn- make-mutable!
+  "Wrap probabilities in an SCFG `sg` with Atoms, so that they can be
+  modified."
+  [sg] (map-v (partial map-v atom) sg))
+
+(defn- freeze!
+  "Freeze a mutable SCFG `sg` to its current probabilities."
+  [sg] (map-v (partial map-v deref) sg))
+
+(defn- normalize!
+  "Ensure that the probabilities of a mutable SCFG `sg` all sum to one
+  (conditional on the non-terminal)."
+  [sg]
+  (doseq [[_ rules] sg
+          :let [sum (->> rules
+                         (map (fn [[_ p]] @p))
+                         (reduce +))]
+          [_ p] rules]
+    (swap! p / sum))
+  sg)
+
+(defn- slice-component
+  "Given an SCFG `sg` and a sequence of non-terminals `nts` returns a new
+  SCFG containing only the non-terminals `nts`. With any non-terminals
+  in rules in `sg` replaced by a special sentinel terminal."
+  [sg nts]
+  (let [valid-nts (into #{} nts)
+        new-term  #(gensym `T)
+        dangling? #(and (non-terminal? %)
+                        (not (valid-nts %)))]
+    (->> nts
+         (select-keys sg)
+         (map-v
+           (partial map-kv
+                    (fn [k v]
+                      [(mapv #(if (dangling? %)
+                                (new-term)
+                                %)
+                             k)
+                       v]))))))
+
+(defn- slice-ps
+  "Given an SCFG `sg` and a CFG `g`, return a sequence of probabilities from
+  `sg` corresponding to rules in `g`."
+  [sg g]
+  (map #(rule-p sg %)
+       (rule-seq g)))
+
+(defn- componentize
+  "Split a grammar according to the strongly connected components of its
+  expectation graph. If rules in one of the components refer to a non-terminal
+  in another, then that symbol in the rule is replaced with a special
+  terminal symbol."
+  [sg]
+  (->> sg freeze! e-graph
+       (map-v #(dissoc % ::T))
+       scc
+       (map (partial slice-component sg))))
+
+(defn- make-strongly-consistent*
+  "Helper function to make the given mutable SCFG strongly consistent. It
+  assumes there is only one strongly connected component in the expectation
+  graph of `sg`."
+  [sg]
+  (let [best-ps
+        (->> sg scfg->cfg
+             best-rules
+             (slice-ps sg)
+             delay)]
+    (while (not (strongly-consistent? (freeze! sg)))
+      (doseq [p (force best-ps)]
+        (swap! p * 2))
+      (normalize! sg))))
+
+(defn make-strongly-consistent
+  "Make the SCFG `sg` strongly consistent."
+  [sg]
+  (let [sg* (make-mutable! sg)]
+    (doseq [sub-g (componentize sg*)]
+      (make-strongly-consistent* sub-g))
+    (freeze! sg*)))
