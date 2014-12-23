@@ -47,8 +47,18 @@
 
 (defn scc
   "Returns a partition of `nodes` into the strongly connected components of the
-  graph represented by `nodes` and the `l->r` edge relation."
-  [nodes l->r r->l]
-  (-> nodes
-      (dfs-seq    l->r)
-      (forest-seq r->l)))
+  graph represented by `nodes` and the `l->r` edge relation.
+
+  If a sparse adjacency list `graph` is given instead, then the nodes are
+  extracted using `keys`, and the `l->r` and and `r->l` edge relations are
+  created by using the `children` and `transpose` helpers."
+
+  ([graph]
+   (scc (keys graph)
+        (children graph)
+        (children (transpose graph))))
+
+  ([nodes l->r r->l]
+   (-> nodes
+       (dfs-seq    l->r)
+       (forest-seq r->l))))
