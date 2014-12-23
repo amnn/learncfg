@@ -33,6 +33,18 @@
            (map-kv (fn [k v] [:a 1])
                    {:a 1, :b 2, :c 3})))))
 
+(deftest map-kv*-test
+  (testing "empty map"
+    (is (= {} (map-kv* (fn [k v] v) {}))))
+
+  (testing "identity map"
+    (is (= {:a :b, :c :d}
+           (map-kv* (fn [k v] v) {:a :b, :c :d}))))
+
+  (testing "applying the function"
+    (is (= {1 2, 3 4}
+           (map-kv* (fn [k v] (inc v))
+                   {1 1, 3 3})))))
 
 (deftest replace-coll-test
   (testing "replace-coll"

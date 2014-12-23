@@ -25,8 +25,16 @@
   [f kvps]
   (reduce-kv (fn [coll k v]
                (apply assoc coll (f k v)))
-             (empty kvps)
-             kvps))
+             (empty kvps) kvps))
+
+(defn map-kv*
+  "Map defined over keys and values in key-value pair collections.
+  The fn `f` takes two arguments (a key and a value), and must return the new
+  value to associate with that key."
+  [f kvps]
+  (reduce-kv (fn [coll k v]
+               (assoc coll k (f k v)))
+             (empty kvps) kvps))
 
 (defn replace-coll
   "Replace all instances of a finite sequence `ys` in a possibly infinite
