@@ -21,12 +21,12 @@
   "Determines what should be done to the given Earley Item."
   [{[_ & rs] :rule offset :offset}]
   {:pre  [(not (neg? offset))]
-   :post [(#{:shift :reduce :predict} %)] }
+   :post [(#{::shift ::reduce ::predict} %)] }
   (if-let [el (get (vec rs) offset)]
     (condp apply [el]
-      terminal?     :shift
-      non-terminal? :predict)
-    :reduce))
+      terminal?     ::shift
+      non-terminal? ::predict)
+    ::reduce))
 
 (defn- non-terminal
   "Get the non-terminal on the LHS of the rule in the item."
@@ -148,7 +148,7 @@
             (recur processed? (pop items) state)
             (case (classify item)
 
-              :shift
+              ::shift
               (recur (conj processed? p-key)
                      (pop items)
                      (let [tok (next-sym item)]
@@ -156,13 +156,13 @@
                          (enqueue-shift state item tok)
                          state)))
 
-              :reduce
+              ::reduce
               (recur (conj processed? p-key)
                      (into (pop items)
                            (perform-reduxns state item))
                      (complete-item state item))
 
-              :predict
+              ::predict
               (let [nt         (next-sym item), r-key [index nt]
                     predicted? (contains? (:reduxns state) r-key)
                     items      (pop (if (nullable? nt)
