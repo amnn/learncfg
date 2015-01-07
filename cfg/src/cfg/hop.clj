@@ -2,7 +2,7 @@
   (:require [clojure.data.priority-map :refer [priority-map]]
             [cfg.coll-util :refer [map-kv*]]
             [cfg.cfg :refer [rule-seq non-terminal?]]
-            [cfg.sat :refer [invert-graph visit-rule]]))
+            [cfg.invert :refer [invert-graph visit-rule]]))
 
 (defn- remove-self-loops
   "Given a CFG `g`, return a new CFG where all self loops had been removed."
@@ -34,10 +34,10 @@
               (recur
                 new-counts
                 (->> (hop-graph nt)
-                     (keep #(let [[children nt rs]
+                     (keep #(let [{:keys [not-visited nt rule]}
                                   (visit-rule %)]
-                              (when (zero? children)
-                                [nt (step-count rs)])))
+                              (when (zero? not-visited)
+                                [nt (step-count rule)])))
                      (into (pop q)))))
             (recur counts (pop q))))
         (persistent! counts)))))
