@@ -23,22 +23,28 @@
   children that are all a member of `nodes`."
   [nodes children]
 
-  (let [visited? (zipmap nodes (repeatedly #(atom false)))
-        forests  (atom '()), dfs (atom '())]
+  (let [visited? (zipmap nodes (repeatedly #(atom false)))]
 
-    (letfn [(dfs-visit [n]
-              (when (compare-and-set!
-                      (visited? n) false true)
-                (doseq [c (children n)]
-                  (dfs-visit c))
-                (swap! dfs conj n)))]
+    (letfn [(visit! [node]
+              (compare-and-set!
+                (visited? node)
+                false true))
 
-      (doseq [n nodes]
-        (dfs-visit n)
-        (when-not (empty? @dfs)
-          (swap! forests conj @dfs)
-          (reset! dfs '())))
-      @forests)))
+            (dfs-visit [dfs-order node]
+              (if (visit! node)
+                (conj
+                  (reduce dfs-visit
+                          dfs-order
+                          (children node))
+                  node)
+                dfs-order))]
+
+      (reduce
+        (fn [forests node]
+          (if-let [dfs (seq (dfs-visit '() node))]
+            (conj forests dfs)
+            forests))
+        '() nodes))))
 
 (defn dfs-seq
   "Gives the depth-first ordering of nodes in a graph represented by `nodes`
