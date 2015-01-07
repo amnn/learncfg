@@ -7,16 +7,16 @@
 
 ;;;;;;;;;; Predicates ;;;;;;;;;;
 
+(def terminal? symbol?)
+(def non-terminal? keyword?)
+
 (defn word?
   "Predicate to say whether a derivation is a word."
-  [s] (every? symbol? s))
+  [s] (every? terminal? s))
 
 (defn not-word?
   "Complement of `word?`"
-  [s] (not-every? symbol? s))
-
-(def terminal? symbol?)
-(def non-terminal? keyword?)
+  [s] (not-every? terminal? s))
 
 (defn cnf-leaf*?
   "Does the given rule qualify as the leaf rule of a CNF grammar."
@@ -71,7 +71,7 @@
   singleton map for consumption by the `cfg` macro."
   [[s => & bodies]]
   {:pre [(arrow? =>)
-         (keyword? s)]}
+         (non-terminal? s)]}
   {s (into #{} (split-rules bodies))})
 
 (defmacro cfg
@@ -93,7 +93,7 @@
   "Creates a single `s => rs` mapping to be used in a CFG."
   [s => & rs]
   {:pre [(arrow? =>)
-         (keyword? s)
+         (non-terminal? s)
          (not-any? #{'|} rs)]}
   `'[~s ~@rs])
 
