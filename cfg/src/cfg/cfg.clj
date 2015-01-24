@@ -143,7 +143,7 @@
   "Provides a textual representation of the grammar `g`."
   [g]
   (letfn [(spaces   [n]    (repeat n \space))
-          (flat-str [& ss] (apply str (flatten ss)))
+          (flat-str [& ss] (join (flatten ss)))
 
           (print-rule [pad nt rs]
             (let [fmt (str "\n  (%-" pad "s => %s)")

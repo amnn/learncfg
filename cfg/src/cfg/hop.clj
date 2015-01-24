@@ -9,7 +9,7 @@
   [g]
   (map-kv* (fn [nt rs]
              (->> rs
-                  (filter (partial (complement some) #{nt}))
+                  (remove #(some #{nt} %))
                   (into (empty rs))))
            g))
 
@@ -19,10 +19,10 @@
   [g]
   (let [hop-graph (->> g remove-self-loops
                        rule-seq invert-graph)
-        alpha     #(vector % 0)]
+        no-hops   #(vector % 0)]
     (loop [counts (transient {})
            q (->> (hop-graph nil)
-                  (map alpha)
+                  (map no-hops)
                   (into (priority-map)))]
       (if-let [[nt hops] (peek q)]
         (let [old-hops (get counts nt)]

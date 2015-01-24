@@ -1,19 +1,20 @@
 (ns cfg.tokenize
   (:import java.lang.IllegalArgumentException))
 
-(defn- first-matching [ms index]
+(defn- first-matching
   "Returns the first matcher from `ms` whose next match from `index` starts
   at `index`."
+  [ms index]
   (->> ms
        (filter (fn [[_ m]]
                  (and (.find m index)
                       (= (.start m) index))))
        first))
 
-(defn ws [re]
+(defn ws
   "Appends whitespace pattern to the front of a regex pattern string and
   converts it into an actual regex pattern"
-  (re-pattern (str "\\s*" re)))
+  [re] (re-pattern (str "\\s*" re)))
 
 (defn tok
   "Convert a series of symbol, rule pairs into a function that takes a string
