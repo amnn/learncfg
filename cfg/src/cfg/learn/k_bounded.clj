@@ -105,7 +105,7 @@
   (flush)
   (let [input (read-line)]
     (println)
-    (when-not (empty? input)
+    (when (seq input)
       (read-string (str \[ input \])))))
 
 (defn sample-counter
@@ -127,7 +127,7 @@
               (print "Blank for yes, index of counter-example for no: ")
               (flush)
               (let [input (read-line)]
-                (when-not (empty? input)
+                (when (seq input)
                   (get tss (dec (read-string input)) nil)))))))))
 
 (defn interactive-member
