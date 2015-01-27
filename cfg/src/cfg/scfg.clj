@@ -5,7 +5,8 @@
             [cfg.coll-util :refer [map-v map-kv]]
             [cfg.hop :refer [best-rules]]
             [cfg.graph :refer [transpose children scc]]
-            [cfg.cfg :refer [rule-seq terminal? non-terminal?]]))
+            [cfg.cfg :refer [mk-rule terminal? non-terminal?] :as cfg]
+            [cfg.prune :as cfg-p]))
 
 (defn cfg->scfg
   "Given a CFG `g`, produce an SCFG with the same rules as `g`, and uniform
@@ -14,18 +15,43 @@
   [g]
   (map-v (fn [rs]
            (let [p (->> (count rs) (/ 1) double)]
-             (->> (map #(vector % p) rs)
-                  (into {}))))
+             (into {} (map #(vector % p) rs))))
          g))
 
 (defn scfg->cfg
   "Given an SCFG `sg`, produce a CFG with the same rules as `g`."
-  [sg] (map-v (comp #(into #{} %) keys) sg))
+  [sg] (map-v (comp set keys) sg))
 
 (defn rule-p
   "Given an SCFG `sg` and a rule return its associated probability, or `nil`
   if it doesn't exist."
-  [sg [lhs & rhs]] (get-in sg [lhs rhs]))
+  [sg [lhs & rhs]] (get-in sg [lhs rhs] 0.0))
+
+(defn rule-seq
+  "Given an `sg`, returns a sequence of [rule probability] pairs in `sg`.
+  If an `nt` is also provided, then only rules from that non-terminal will be
+  given."
+  ([sg]
+   (for [[nt rs] sg
+         [r p]   rs]
+     [(mk-rule nt r) p]))
+
+  ([sg nt]
+   (for [rs (get sg nt {})
+         [r p] rs]
+     [(mk-rule nt r) p])))
+
+(defn add-rule
+  "Add rule `nt => r` with probability `p` to SCFG `sg`."
+  [sg [nt & r] p] (assoc-in sg [nt r] p))
+
+(defn slice
+  "Given an SCFG `sg` and a CFG `g`, return an SCFG with the rules from `g`
+  and the probabilities from `sg`."
+  [sg g]
+  (->> g cfg/rule-seq
+       (map (fn [r] [r (rule-p sg r)]))
+       (reduce (partial apply add-rule) {})))
 
 (defn sample
   "Given an SCFG `sg`, returns a string generated according to its
@@ -47,6 +73,17 @@
             flatten vec
             (recur sg))))))
 
+(defn prune
+  "Given an SCFG `sg` and a probability `p` Remove all rules with
+  probabilities below `p`, and then remove any non-terminals which become
+  unreachable as a result."
+  [p sg]
+  (->> sg rule-seq
+       (keep (fn [[r q]] (when (>= q p) r)))
+       (reduce cfg/add-rule {})
+       cfg-p/prune
+       (slice sg)))
+
 (defn e-graph
   "A sparse adjacency list for the directed graph representation of the
   expectation system (`e-system`, see below) for an SCFG.
@@ -64,16 +101,16 @@
   Each edge `A -> B` is labeled with the probability of seeing a B after
   transitioning from A."
   [sg]
-  (->> sg
-       (map-v (partial
-                reduce
-                (fn [row [rule p]]
-                  (reduce (fn [row sym]
-                            (let [col (if (terminal? sym) ::T sym)
-                                  p*  (get row col 0)]
-                              (assoc row col (+ p p*))))
-                          row rule))
-                {}))))
+  (map-v (partial
+          reduce
+          (fn [row [rule p]]
+            (reduce (fn [row sym]
+                      (let [col (if (terminal? sym) ::T sym)
+                            p*  (get row col 0)]
+                        (assoc row col (+ p p*))))
+                    row rule))
+          {})
+         sg))
 
 (defn e-system
   "Given an SCFG `sg` in CNF return a record containing a matrix `:M`, a
@@ -143,7 +180,7 @@
   SCFG containing only the non-terminals `nts`. With any non-terminals
   in rules in `sg` replaced by a special sentinel terminal."
   [sg nts]
-  (let [valid-nts (into #{} nts)
+  (let [valid-nts (set nts)
         new-term  #(gensym `T)
         dangling? #(and (non-terminal? %)
                         (not (valid-nts %)))]
@@ -163,7 +200,7 @@
   `sg` corresponding to rules in `g`."
   [sg g]
   (map #(rule-p sg %)
-       (rule-seq g)))
+       (cfg/rule-seq g)))
 
 (defn- componentize
   "Split a grammar according to the strongly connected components of its

@@ -1,8 +1,9 @@
 (ns cfg.scfg-test
   (:require [clojure.test :refer :all]
+            [clojure.set :refer [intersection]]
             [cfg.scfg :refer :all]
             [clojure.core.matrix.operators :as m]
-            [cfg.cfg :refer [cfg]]))
+            [cfg.cfg :refer [cfg mk-rule]]))
 
 (deftest cfg->scfg-test
   (testing "cfg->scfg"
@@ -11,6 +12,86 @@
            [:S '[A]] 1
            [:T '[B]] 1/2
            [:T '[C]] 1/2))))
+
+(deftest scfg->cfg-test
+  (testing "Removes probabilities"
+    (let [sg {:S {[:A :B] 0.5
+                  [:C :D] 0.5}}]
+      (is (= (scfg->cfg sg)
+             (cfg (:S => :A :B | :C :D))))
+      )))
+
+(deftest rule-p-test
+  (testing "Existing rules"
+    (is (= (rule-p {:S {[:A :B] 1.0}}
+                   (mk-rule :S [:A :B]))
+           1.0)))
+
+  (testing "Existing non-terminal (non-existing rule)"
+    (is (= (rule-p {:S {[:C :D] 1.0}}
+                   (mk-rule :S [:A :B]))
+           0.0)))
+
+  (testing "Non-existing non-terminal"
+    (is (= (rule-p {} (mk-rule :S [:A :B]))
+           0.0))))
+
+(deftest rule-seq-test
+  (testing "empty grammar"
+    (is (empty? (rule-seq {}))))
+
+  (testing "single non-terminal"
+    (let [rs #{[[:S :A :B] 0.5]
+               [[:S :C :D] 0.5]}]
+      (is (= rs (intersection
+                 rs (set (rule-seq {:S {[:A :B] 0.5
+                                        [:C :D] 0.5}})))))))
+
+  (testing "multiple non-terminals"
+    (let [rs #{[[:S :A :B] 1.0]
+               [[:T :C :D] 1.0]}]
+      (is (= rs (intersection
+                 rs (set (rule-seq {:S {[:A :B] 1.0}
+                                    :T {[:C :D] 1.0}}))))))))
+
+(deftest add-rule-test
+  (testing "existing rule (updates the probability)"
+    (is (= (add-rule {:S {[:A :B] 0.5}} [:S :A :B] 1.0)
+           {:S {[:A :B] 1.0}})))
+
+  (testing "new rule"
+    (is (= (add-rule {:S {[:A :B] 0.5}} [:S :C :D] 0.5)
+           {:S {[:A :B] 0.5 [:C :D] 0.5}})))
+
+  (testing "new non-terminal"
+    (is (= (add-rule {:S {[:A :B] 1.0}} [:T :C :D] 1.0)
+           {:S {[:A :B] 1.0} :T {[:C :D] 1.0}}))))
+
+(deftest slice-test
+  (testing "slicing"
+    (is (= (slice {:S {[:A :B] 0.5
+                     [:C :D] 0.5}}
+                (cfg (:S => :C :D)))
+           {:S {[:C :D] 0.5}}))))
+
+(deftest prune-test
+  (testing "threshold probability"
+    (is (= (prune 0.5 '{:S {[A B] 0.6
+                            [C D] 0.4}})
+           '{:S {[A B] 0.6}})))
+
+  (testing "non-reachable rules"
+    (is (= (prune 0.5 '{:S {[A :T] 0.4
+                            [C D] 0.6}
+                        :T {[E F] 1.0}})
+           '{:S {[C D] 0.6}})))
+
+  (testing "non-contributing rules"
+    (is (= (prune 0.4 '{:S {[A :T] 0.5
+                            [C D]  0.5}
+                        :T {[E F] 0.3
+                            [:A :B] 0.7}})
+           '{:S {[C D] 0.5}}))))
 
 (deftest e-graph-test
   (testing "e-graph"
