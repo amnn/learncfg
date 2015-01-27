@@ -4,7 +4,7 @@
             [bigml.sampling.stream :as stream]
             [cfg.coll-util :refer [queue]]
             [cfg.learn.util :refer :all]
-            [cfg.prune :refer [prune]]
+            [cfg.prune :refer [prune-cfg]]
             [cfg.lang :refer [parse-tree lang-seq in-lang]]
             [cfg.scfg :refer [cfg->scfg make-strongly-consistent sample]]
             [cfg.cfg :refer [cfg add-rule remove-rule
@@ -82,7 +82,7 @@
   [counter* member* nts]
   (let [member* (memoize member*)]
     (loop [g (init-grammar nts), blacklist #{}]
-      (let [pg (prune g)]
+      (let [pg (prune-cfg g)]
         (if-let [c (counter* pg)]
           (if-let [t (parse-tree g c)]
             (let [bad-rules  (diagnose member* t)

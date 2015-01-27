@@ -2,7 +2,8 @@
   (:require [cfg.coll-util :refer [queue]]
             [cfg.sat :refer [horn-sat]]
             [cfg.cfg :refer [terminal? non-terminal?
-                             non-terminal rule-seq filterr]]))
+                             non-terminal filterr] :as cfg]
+            [cfg.scfg :as scfg]))
 
 (defn reachable-nts
   "Returns the non-terminals we can reach from a given symbol `nt`. If `nt` is
@@ -24,9 +25,9 @@
 
 (defn contributing-nts
   "Returns the non-terminals that can yield strings."
-  [g] (->> g rule-seq horn-sat))
+  [g] (->> g cfg/rule-seq horn-sat))
 
-(defn prune
+(defn prune-cfg
   "Given a grammar `g`, remove all the rules that do not contribute to the
   language, and all the rules that are not reachable from the start symbol."
   [g]
@@ -35,3 +36,14 @@
         g*           (filterr contributes? g)
         rnts         (reachable-nts g*)]
     (filterr (comp rnts non-terminal) g*)))
+
+(defn prune-scfg
+  "Given an SCFG `sg` and a probability `p` Remove all rules with
+  probabilities below `p`, and then remove any non-terminals which become
+  unreachable as a result."
+  [p sg]
+  (->> sg scfg/rule-seq
+       (keep (fn [[r q]] (when (>= q p) r)))
+       (reduce cfg/add-rule {})
+       prune-cfg
+       (scfg/slice sg)))

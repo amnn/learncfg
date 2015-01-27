@@ -5,8 +5,7 @@
             [cfg.coll-util :refer [map-v map-kv]]
             [cfg.hop :refer [best-rules]]
             [cfg.graph :refer [transpose children scc]]
-            [cfg.cfg :refer [mk-rule terminal? non-terminal?] :as cfg]
-            [cfg.prune :as cfg-p]))
+            [cfg.cfg :refer [mk-rule terminal? non-terminal?] :as cfg]))
 
 (defn cfg->scfg
   "Given a CFG `g`, produce an SCFG with the same rules as `g`, and uniform
@@ -72,17 +71,6 @@
                     pick-rule))
             flatten vec
             (recur sg))))))
-
-(defn prune
-  "Given an SCFG `sg` and a probability `p` Remove all rules with
-  probabilities below `p`, and then remove any non-terminals which become
-  unreachable as a result."
-  [p sg]
-  (->> sg rule-seq
-       (keep (fn [[r q]] (when (>= q p) r)))
-       (reduce cfg/add-rule {})
-       cfg-p/prune
-       (slice sg)))
 
 (defn e-graph
   "A sparse adjacency list for the directed graph representation of the

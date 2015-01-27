@@ -42,26 +42,44 @@
              '{:S #{[A] [:B]}
                :T #{[A :B]}})))))
 
-(deftest prune-test
+(deftest prune-cfg-test
   (testing "no superfluous grammars"
     (let [g '{:S #{[A]}}]
-      (is (= g (prune g)))))
+      (is (= g (prune-cfg g)))))
 
   (testing "unreachable rules"
     (is (= '{:S #{[A :T]}
              :T #{[]}}
-           (prune '{:S #{[A :T]}
-                    :T #{[]}
-                    :B #{[A B]}}))))
+           (prune-cfg '{:S #{[A :T]}
+                        :T #{[]}
+                        :B #{[A B]}}))))
 
   (testing "non-contributing rules"
     (is (= '{:S #{[A]}}
-           (prune '{:S #{[A] [A :T]}
-                    :T #{[:T]}}))))
+           (prune-cfg '{:S #{[A] [A :T]}
+                        :T #{[:T]}}))))
 
   (testing "non-contributing rules that when removed, create unreachable rules"
     (is (= '{:S #{[A]}}
-           (prune '{:S #{[A] [A :T]}
-                    :T #{[:T :U]}
-                    :U #{[B]}})))))
+           (prune-cfg '{:S #{[A] [A :T]}
+                        :T #{[:T :U]}
+                        :U #{[B]}})))))
 
+(deftest prune-scfg-test
+  (testing "threshold probability"
+    (is (= (prune-scfg 0.5 '{:S {[A B] 0.6
+                                 [C D] 0.4}})
+           '{:S {[A B] 0.6}})))
+
+  (testing "non-reachable rules"
+    (is (= (prune-scfg 0.5 '{:S {[A :T] 0.4
+                                 [C D] 0.6}
+                             :T {[E F] 1.0}})
+           '{:S {[C D] 0.6}})))
+
+  (testing "non-contributing rules"
+    (is (= (prune-scfg 0.4 '{:S {[A :T] 0.5
+                                 [C D]  0.5}
+                             :T {[E F] 0.3
+                                 [:A :B] 0.7}})
+           '{:S {[C D] 0.5}}))))

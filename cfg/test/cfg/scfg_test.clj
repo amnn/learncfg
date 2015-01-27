@@ -74,25 +74,6 @@
                 (cfg (:S => :C :D)))
            {:S {[:C :D] 0.5}}))))
 
-(deftest prune-test
-  (testing "threshold probability"
-    (is (= (prune 0.5 '{:S {[A B] 0.6
-                            [C D] 0.4}})
-           '{:S {[A B] 0.6}})))
-
-  (testing "non-reachable rules"
-    (is (= (prune 0.5 '{:S {[A :T] 0.4
-                            [C D] 0.6}
-                        :T {[E F] 1.0}})
-           '{:S {[C D] 0.6}})))
-
-  (testing "non-contributing rules"
-    (is (= (prune 0.4 '{:S {[A :T] 0.5
-                            [C D]  0.5}
-                        :T {[E F] 0.3
-                            [:A :B] 0.7}})
-           '{:S {[C D] 0.5}}))))
-
 (deftest e-graph-test
   (testing "e-graph"
     (let [sg '{:S {[:S :S] 1/3
