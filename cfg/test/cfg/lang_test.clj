@@ -111,47 +111,54 @@
     (is (= '[[A] [B C] [D E F]]
            (lang-seq (cfg (:S => A | B C | D E F)))))))
 
-(deftest parse-tree-test
+(deftest parse-trees-test
   (testing "left recursion"
     (let [g (cfg (:S => :A :S | A)
                  (:A => A))]
-      (is (= nil (parse-tree g '[B])))
+      (is (= nil (parse-trees g '[B])))
 
-      (is (= '[:S [A] #{[[:S A]]}]
-             (parse-tree g '[A])))
+      (is (= #cfg.lang.MultiLeaf[:S [A] #{[[:S A]]}]
+             (parse-trees g '[A])))
 
-      (is (= '[:S [A A] #{[[:S :A :S]
-                           [:A [A] #{[[:A A]]}]
-                           [:S [A] #{[[:S A]]}]]}]
-             (parse-tree g '[A A])))))
+      (is (= #cfg.lang.MultiBranch
+             [:S [A A]
+              #{[[:S :A :S]
+                 #cfg.lang.MultiLeaf[:A [A] #{[[:A A]]}]
+                 #cfg.lang.MultiLeaf[:S [A] #{[[:S A]]}]]}]
+             (parse-trees g '[A A])))))
 
   (testing "right recursion"
     (let [g (cfg (:S => :S :A | A)
                  (:A => A))]
-      (is (= nil (parse-tree g '[B])))
+      (is (= nil (parse-trees g '[B])))
 
-      (is (= '[:S [A] #{[[:S A]]}]
-             (parse-tree g '[A])))
+      (is (= #cfg.lang.MultiLeaf[:S [A] #{[[:S A]]}]
+             (parse-trees g '[A])))
 
-      (is (= '[:S [A A] #{[[:S :S :A]
-                           [:S [A] #{[[:S A]]}]
-                           [:A [A] #{[[:A A]]}]]}]
-             (parse-tree g '[A A])))))
+      (is (= #cfg.lang.MultiBranch
+             [:S [A A]
+              #{[[:S :S :A]
+                 #cfg.lang.MultiLeaf[:S [A] #{[[:S A]]}]
+                 #cfg.lang.MultiLeaf[:A [A] #{[[:A A]]}]]}]
+             (parse-trees g '[A A])))))
 
   (testing "ambiguous grammar"
     (let [g (cfg (:S => :S :S | A))]
-      (is (= '[:S [A A A]
-               #{[[:S :S :S]
-                  [:S [A A]
-                   #{[[:S :S :S]
-                      [:S [A] #{[[:S A]]}]
-                      [:S [A] #{[[:S A]]}]]}]
-                  [:S [A] #{[[:S A]]}]]
+      (is (= #cfg.lang.MultiBranch
+             [:S [A A A]
+              #{[[:S :S :S]
+                 #cfg.lang.MultiBranch
+                 [:S [A A]
+                  #{[[:S :S :S]
+                     #cfg.lang.MultiLeaf[:S [A] #{[[:S A]]}]
+                     #cfg.lang.MultiLeaf[:S [A] #{[[:S A]]}]]}]
+                 #cfg.lang.MultiLeaf[:S [A] #{[[:S A]]}]]
 
-                 [[:S :S :S]
-                  [:S [A] #{[[:S A]]}]
-                  [:S [A A]
-                   #{[[:S :S :S]
-                      [:S [A] #{[[:S A]]}]
-                      [:S [A] #{[[:S A]]}]]}]]}]
-            (parse-tree g '[A A A]))))))
+                [[:S :S :S]
+                 #cfg.lang.MultiLeaf[:S [A] #{[[:S A]]}]
+                 #cfg.lang.MultiBranch
+                 [:S [A A]
+                  #{[[:S :S :S]
+                     #cfg.lang.MultiLeaf[:S [A] #{[[:S A]]}]
+                     #cfg.lang.MultiLeaf[:S [A] #{[[:S A]]}]]}]]}]
+             (parse-trees g '[A A A]))))))

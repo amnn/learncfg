@@ -2,7 +2,7 @@
   (:require [cfg.null :refer [nullable null-free]]
             [clojure.set :refer [union]]
             [clojure.core.reducers :as r]
-            [cfg.cfg :refer [add-rule rule-seq terminal? non-terminal?]]
+            [cfg.cfg :refer [add-rule rule-seq terminal? non-terminal? cnf-branch?]]
             [cfg.coll-util :refer [queue]]))
 
 (defrecord ^:private Item
@@ -228,11 +228,77 @@
          (mapcat #(get-in % [:complete success-key]))
          (map first))))
 
-(defn parse-tree
+(defn- parse-tree*
+  "Generalisation of the CYK algorithm, for calculating the parse trees of
+  CNF grammars (see `(doc parse-tree)` for details), wherein, the following
+  must be supplied by the caller:
+    * `->branch`/`->leaf`
+      Data constructors for the tree nodes.
+      Usage: `(->branch nt rule yield lt rt)`
+             `(->leaf   nt rule yield)`
+    * `branches`/`leaves`
+      Rules of the grammar, split according to whether they are branching or
+      not.
+    * `merge-fn`
+      When two different sub-trees rooted at the same non-terminal produce the
+      same yield, they are given to this function to merge/choose the best
+      sub-tree.
+    * `rule`
+      A function that extracts the rule from the aforementioned `branches` and
+      `leaves`.
+    * `ts`
+      The sequence of tokens to parse.
+    * `root`
+      The root non-terminal."
+  [& {:keys [->branch ->leaf merge-fn rule
+             branches leaves root ts]}]
+  (let [toks (vec ts)
+        n    (count toks)
+
+        t-map (->> leaves
+                   (map (fn [l]
+                          (let [[nt t] (rule l)]
+                            {t {nt l}})))
+                   (apply merge-with merge))
+
+        subtok (fn [start len]
+                 (subvec toks start
+                         (+ start len)))
+
+        partials
+        {1 (into {} (for [j (range n)
+                          :let [[t :as yield] (subtok j 1)]]
+                      [j (into {} (for [[nt l] (get t-map t)]
+                                    [nt (->leaf nt l yield)]))]))}
+
+        build-partial
+        (fn [p [i j k branch]]
+          (let        [[a b c]  (rule branch)]
+            (if-let   [bt       (get-in p [k j b])]
+              (if-let [ct       (get-in p [(- i k) (+ j k) c])]
+                (let  [new-node (->branch a branch (subtok j i) bt ct)]
+                  (if-let [node (get-in p [i j a])]
+                    (update-in p [i j a] merge-fn new-node)
+                    (assoc-in  p [i j a] new-node)))
+                p)
+              p)))]
+
+    (-> (reduce build-partial partials
+                (for [i (range 2 (inc n))  ;; Subsequence length
+                      j (range (- n i -1)) ;; Start position
+                      k (range 1 i)        ;; Split point
+                      b branches]          ;; Rule
+                  [i j k b]))
+        (get-in [n 0 root]))))
+
+(defrecord ^:private MultiBranch [nt yield children])
+(defrecord ^:private MultiLeaf   [nt yield children])
+
+(defn parse-trees
   "Given a grammar `g` in Chomsky Normal Form(1), and a sequence of tokens,
-  `ts`, returns a derivation tree for `g` recognising `ts` if one exists
+  `ts`, returns all derivation trees frp, `g` recognising `ts` if any exist
   or `nil` otherwise. Optionally, a `root` non-terminal may provided, which
-  will be the non-terminal's whose rules form the root node of the tree. If
+  will be the non-terminal's whose rules form the root node of the trees. If
   one is not provided, `:S` is picked by default.
 
   (1) All rules in a CFG in CNF are of the form:
@@ -242,43 +308,25 @@
 
   For non-terminals `A`, `B`, `C` and terminals `a`."
 
-  ([g ts] (parse-tree g ts :S))
+  ([g ts] (parse-trees g :S ts))
 
-  ([g ts root]
-   (let [toks (vec ts)
-         n    (count toks)
-
-         {branches true, leaves false}
-         (group-by #(every? non-terminal? %)
-                   (rule-seq g))
-
-         t-map (->> leaves
-                    (map (fn [[nt t]] {t #{nt}}))
-                    (apply merge-with union))
-
-         subtok (fn [start len] (subvec toks start (+ start len)))
-
-         partials
-         {1 (apply merge-with union
-                   (for [j (range n)
-                         :let [[t :as yield] (subtok j 1)]]
-                     {j (into {} (for [nt (get t-map t)]
-                                   [nt [nt yield #{[[nt t]]}]]))}))}
-
-         build-partial
-         (fn [p [i j k r a b c]]
-           (if-let     [bt   (get-in p [k j b])]
-             (if-let   [ct   (get-in p [(- i k) (+ j k) c])]
-               (if-let [node (get-in p [i j a])]
-                 (update-in p [i j a 2] union #{[r bt ct]})
-                 (assoc-in  p [i j a] [a (subtok j i) #{[r bt ct]}]))
-               p)
-             p))]
-
-     (-> (reduce build-partial partials
-                 (for [i (range 2 (inc n))         ;; Subsequence length
-                       j (range (- n i -1))        ;; Start position
-                       k (range 1 i)               ;; Split point
-                       [a b c :as r] branches]     ;; Rule
-                   [i j k r a b c]))
-         (get-in [n 0 root])))))
+  ([g root ts]
+   (let [{branches true leaves false}
+         (group-by cnf-branch?
+                   (rule-seq g))]
+     (parse-tree*
+      :->branch
+      (fn [nt rule yield lt rt]
+        (->MultiBranch nt yield #{[rule lt rt]}))
+      :->leaf
+      (fn [nt rule yield]
+        (->MultiLeaf nt yield #{[rule]}))
+      :merge-fn
+      (fn [b1 b2]
+        (update-in b1 [:children] union
+                   (:children b2)))
+      :rule identity
+      :branches branches
+      :leaves   leaves
+      :root     root
+      :ts       ts))))

@@ -5,7 +5,7 @@
             [cfg.coll-util :refer [queue]]
             [cfg.learn.util :refer :all]
             [cfg.prune :refer [prune-cfg]]
-            [cfg.lang :refer [parse-tree lang-seq in-lang]]
+            [cfg.lang :refer [parse-trees lang-seq in-lang]]
             [cfg.scfg :refer [cfg->scfg make-strongly-consistent sample]]
             [cfg.cfg :refer [cfg add-rule remove-rule
                              cnf-leaf? show-cfg]]))
@@ -31,15 +31,15 @@
   return a bad production used in the parse-tree."
   [member* t]
   (letfn [(consume-child [state [rule & children]]
-            (if-let [bad-child (some (fn [[cr cy :as child]]
-                                       (when-not (member* cr cy) child))
+            (if-let [bad-child (some (fn [{cnt :nt cy :yield :as child}]
+                                       (when-not (member* cnt cy) child))
                                      children)]
               (update-in state [0] conj  bad-child)
               (update-in state [1] conj! rule)))]
     (loop [q         (queue t)
            bad-rules (transient #{})]
       (if (seq q)
-        (let [[_ _ children] (peek q)
+        (let [{:keys [children]} (peek q)
               [q* bad-rules*] (reduce consume-child
                                       [(pop q) bad-rules]
                                       children)]
@@ -84,7 +84,7 @@
     (loop [g (init-grammar nts), blacklist #{}]
       (let [pg (prune-cfg g)]
         (if-let [c (counter* pg)]
-          (if-let [t (parse-tree g c)]
+          (if-let [t (parse-trees g c)]
             (let [bad-rules  (diagnose member* t)
                   bad-leaves (filter cnf-leaf? bad-rules)]
               (recur (reduce remove-rule g bad-rules)
