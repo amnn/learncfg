@@ -2,7 +2,9 @@
   (:require [cfg.null :refer [nullable null-free]]
             [clojure.set :refer [union]]
             [clojure.core.reducers :as r]
-            [cfg.cfg :refer [add-rule rule-seq terminal? non-terminal? cnf-branch?]]
+            [cfg.cfg :refer [add-rule terminal? non-terminal?
+                             cnf-branch?] :as cfg]
+            [cfg.scfg :as scfg]
             [cfg.coll-util :refer [queue]]))
 
 (defrecord ^:private Item
@@ -15,7 +17,7 @@
 (defn- init-items
   "Create a sequence of new Earley Items for a non-terminal `nt` and grammar
   `g` starting at the index `i`."
-  [g nt i] (map #(new-item % i) (rule-seq g nt)))
+  [g nt i] (map #(new-item % i) (cfg/rule-seq g nt)))
 
 (defn- classify
   "Determines what should be done to the given Earley Item."
@@ -296,9 +298,9 @@
 
 (defn parse-trees
   "Given a grammar `g` in Chomsky Normal Form(1), and a sequence of tokens,
-  `ts`, returns all derivation trees frp, `g` recognising `ts` if any exist
-  or `nil` otherwise. Optionally, a `root` non-terminal may provided, which
-  will be the non-terminal's whose rules form the root node of the trees. If
+  `ts`, returns all derivation trees for, `g` recognising `ts` if any exist
+  or `nil` otherwise. Optionally, a `root` non-terminal may be provided, which
+  will be the non-terminal whose rules form the root node of the trees. If
   one is not provided, `:S` is picked by default.
 
   (1) All rules in a CFG in CNF are of the form:
@@ -313,20 +315,92 @@
   ([g root ts]
    (let [{branches true leaves false}
          (group-by cnf-branch?
-                   (rule-seq g))]
+                   (cfg/rule-seq g))]
      (parse-tree*
+      :branches branches, :leaves leaves
+      :root root, :ts ts
+
       :->branch
       (fn [nt rule yield lt rt]
         (->MultiBranch nt yield #{[rule lt rt]}))
+
       :->leaf
       (fn [nt rule yield]
         (->MultiLeaf nt yield #{[rule]}))
+
       :merge-fn
       (fn [b1 b2]
         (update-in b1 [:children] union
                    (:children b2)))
-      :rule identity
-      :branches branches
-      :leaves   leaves
-      :root     root
-      :ts       ts))))
+
+      :rule identity))))
+
+(defrecord ^:private PBranch [nt rule p yield lt rt])
+(defrecord ^:private PLeaf   [nt rule p yield])
+
+(defn ml-tree
+  "Given an SCFG `sg` in Chomsky Normal Form, and a sequence of tokens, `ts`,
+  returns the derivation tree of maximum likelihood for `g`, recognising `ts`
+  if any exists, or `nil` otherwise. Optionally, a `root` non-terminal may be
+  provided, which will be the non-terminal whose rule forms the root of the
+  tree. If one is not provided, `:S` is picked as the default."
+
+  ([sg ts] (ml-tree sg :S ts))
+
+  ([sg root ts]
+   (let [{branches true leaves false}
+         (group-by (comp cnf-branch? first)
+                   (scfg/rule-seq sg))]
+     (parse-tree*
+      :branches branches, :leaves leaves
+      :root root, :ts ts
+
+      :->branch
+      (fn [nt [rule p] yield lt rt]
+        (->PBranch nt rule (* p (:p lt) (:p rt))
+                   yield lt rt))
+
+      :->leaf
+      (fn [nt [rule p] yield]
+        (->PLeaf nt rule p yield))
+
+      :merge-fn
+      (fn [b1 b2]
+        (max-key :p b1 b2))
+
+      :rule first))))
+
+(defrecord ^:private MultiPBranch [nt yield p children])
+(defrecord ^:private MultiPLeaf   [nt yield p children])
+
+(defn inside-p
+  "Given an SCFG `sg` in Chomsky Normal Form, and a sequence of tokens `ts`,
+  returns all the derivation trees, for `sg` recognising `ts`, annotated with
+  the inside probability of generating `ts` with `sg`."
+
+  ([sg ts] (inside-p sg :S ts))
+
+  ([sg root ts]
+   (let [{branches true leaves false}
+         (group-by (comp cnf-branch? first)
+                   (scfg/rule-seq sg))]
+     (parse-tree*
+      :branches branches, :leaves leaves
+      :root root, :ts ts
+
+      :->branch
+      (fn [nt [rule p] yield lt rt]
+        (->MultiPBranch nt yield (* p (:p lt) (:p rt))
+                        #{[rule lt rt]}))
+
+      :->leaf
+      (fn [nt [rule p] yield]
+        (->MultiPLeaf nt yield p #{[rule]}))
+
+      :merge-fn
+      (fn [b1 {cs2 :children p2 :p}]
+        (-> b1
+            (update-in [:p] + p2)
+            (update-in [:children] union cs2)))
+
+      :rule first))))

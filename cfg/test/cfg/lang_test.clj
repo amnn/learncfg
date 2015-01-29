@@ -162,3 +162,60 @@
                      #cfg.lang.MultiLeaf[:S [A] #{[[:S A]]}]
                      #cfg.lang.MultiLeaf[:S [A] #{[[:S A]]}]]}]]}]
              (parse-trees g '[A A A]))))))
+
+(deftest ml-tree-test
+  (testing "terminals"
+    (is (= #cfg.lang.PLeaf[:S [:S A] 1.0 [A]]
+           (ml-tree '{:S {[A] 1.0}} '[A]))))
+
+  (testing "unambiguous grammar"
+    (is (= #cfg.lang.PBranch
+           [:S [:S :A :S] 0.25 [A A]
+            #cfg.lang.PLeaf[:A [:A A] 1.0 [A]]
+            #cfg.lang.PLeaf[:S [:S A] 0.5 [A]]]
+           (ml-tree '{:S {[:A :S] 0.5
+                          [A]     0.5}
+                      :A {[A]     1.0}}
+                    '[A A]))))
+
+  (testing "ambiguous grammar"
+    (is (= #cfg.lang.PBranch
+           [:S [:S :A :S] 0.0625 [A A]
+            #cfg.lang.PLeaf[:A [:A A] 1.0  [A]]
+            #cfg.lang.PLeaf[:S [:S A] 0.25 [A]]]
+           (ml-tree '{:S {[:A :S] 0.25
+                          [:S :S] 0.5
+                          [A]     0.25}
+                      :A {[A]     1.0}}
+                    '[A A])))))
+
+(deftest inside-p-tree
+  (testing "terminals"
+    (is (= #cfg.lang.MultiPLeaf[:S [A] 1.0 #{[[:S A]]}]
+           (inside-p '{:S {[A] 1.0}} '[A]))))
+
+  (testing "unambiguous grammar"
+    (is (= #cfg.lang.MultiPBranch
+           [:S [A A] 0.25
+            #{[[:S :A :S]
+               #cfg.lang.MultiPLeaf[:A [A] 1.0 #{[[:A A]]}]
+               #cfg.lang.MultiPLeaf[:S [A] 0.5 #{[[:S A]]}]]}]
+           (inside-p '{:S {[:A :S] 0.5
+                           [A]     0.5}
+                       :A {[A]     1.0}}
+                     '[A A]))))
+
+  (testing "ambiguous grammar"
+    (is (= #cfg.lang.MultiPBranch
+           [:S [A A] 0.09375
+            #{[[:S :A :S]
+               #cfg.lang.MultiPLeaf[:A [A] 1.0  #{[[:A A]]}]
+               #cfg.lang.MultiPLeaf[:S [A] 0.25 #{[[:S A]]}]]
+              [[:S :S :S]
+               #cfg.lang.MultiPLeaf[:S [A] 0.25 #{[[:S A]]}]
+               #cfg.lang.MultiPLeaf[:S [A] 0.25 #{[[:S A]]}]]}]
+           (inside-p '{:S {[:A :S] 0.25
+                           [:S :S] 0.5
+                           [A]     0.25}
+                       :A {[A]     1.0}}
+                     '[A A])))))
