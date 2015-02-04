@@ -42,7 +42,7 @@
 
 (defn add-rule
   "Add rule `nt => r` with probability `p` to SCFG `sg`."
-  [sg [nt & r] p] (assoc-in sg [nt r] p))
+  [sg [nt & r] p] (assoc-in sg [nt (vec r)] p))
 
 (defn slice
   "Given an SCFG `sg` and a CFG `g`, return an SCFG with the rules from `g`
