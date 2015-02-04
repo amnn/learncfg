@@ -4,18 +4,13 @@
   (/ 1.0 (+ 1 (Math/exp (- x)))))
 
 (defrecord ^:private Classifier
-  [K ws b])
+  [K ws])
 
 (defn mk-classifier
   "Create an empty classifier with kernel `K`, and (optional) weight vector
   `ws` (represented as a map from samples to weights)."
-  ([K ws] (->Classifier K ws 0))
+  ([K ws] (->Classifier K ws))
   ([K] (mk-classifier K {})))
-
-(defn update-offset
-  "Change the offset added to the inner-product, by the classifier `C`, by
-  applying `f` to the current offset and any extra `& args`."
-  [C f & args] (apply update-in C [:b] f args))
 
 (defn classify
   "Given a classifier with kernel `K`, weights `ws` and offset `b`, classify
@@ -34,17 +29,16 @@
   $$
 
   Where $\\sigma$ represents the sigmoid function."
-  [{:keys [K ws b]} x]
+  [{:keys [K ws]} x]
   (->> (for [[x* a] ws]
-         (* a (K x x*)))
-       (reduce + b)
+         (* @a (K x x*)))
+       (reduce +)
        sigmoid))
 
 (defn learn
   "Update classifier `W` with sample `x` whose true label is `y*` (0 or 1).
   When updating the classifier, a change of at most `rate` is made."
   [rate W x y*]
-  (let [y (classify W x)]
-    (update-in W [:ws x]
-               #(+ (or % 0) %2)
-               (* rate (- y* y)))))
+  (let [y (classify W x)
+        d (* rate (- y* y))]
+    (update-in W [:ws x] swap! + d)))
