@@ -1,7 +1,10 @@
 (ns cfg.logistic-regression)
 
-(defn- sigmoid [x]
+(defn sigmoid [x]
   (/ 1.0 (+ 1 (Math/exp (- x)))))
+
+(defn logit [x]
+  (Math/log (/ x (- 1 x))))
 
 (defrecord ^:private Classifier
   [K ws])
