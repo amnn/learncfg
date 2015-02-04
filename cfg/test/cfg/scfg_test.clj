@@ -128,3 +128,35 @@
           '{:S {[:L :R] 1}
             :L {[:L :S] 1/3 [L] 2/3}
             :R {[:R :S] 1/3 [R] 2/3}}))))
+
+(deftest normalize-test
+  (testing "normalize"
+    (is (= '{:S {[:A :B] 1/2
+                 [C]     1/2}}
+           (normalize
+            '{:S {[:A :B] 1
+                  [C]     1}}))))
+
+  (testing "already normalized"
+    (let [g (->> (cfg (:S => :A :B | C)
+                      (:A => A)
+                      (:B => B))
+                 cfg->scfg)]
+      (is (= g (normalize g))))))
+
+(deftest normalize!-test
+  (testing "normalize!"
+    (is (= '{:S {[:A :B] 1/2
+                 [C]     1/2}}
+           (freeze!
+            (normalize!
+             {:S {[:A :B] (atom 1)
+                  '[C]    (atom 1)}})))))
+
+  (testing "already normalized"
+    (let [g (->> (cfg (:S => :A :B | C)
+                      (:A => A)
+                      (:B => B))
+                 cfg->scfg
+                 make-mutable!)]
+      (is (= g (normalize! g))))))

@@ -142,16 +142,16 @@
         (->> (mmul inv v)
              (every? pos?))))))
 
-(defn- make-mutable!
+(defn make-mutable!
   "Wrap probabilities in an SCFG `sg` with Atoms, so that they can be
   modified."
   [sg] (map-v (partial map-v atom) sg))
 
-(defn- freeze!
+(defn freeze!
   "Freeze a mutable SCFG `sg` to its current probabilities."
   [sg] (map-v (partial map-v deref) sg))
 
-(defn- normalize!
+(defn normalize!
   "Ensure that the probabilities of a mutable SCFG `sg` all sum to one
   (conditional on the non-terminal)."
   [sg]
@@ -162,6 +162,15 @@
           [_ p] rules]
     (swap! p / sum))
   sg)
+
+(defn normalize
+  "Given an SCFG `sg` return a new SCFG in which all probabilities conditional
+  on a particular non-terminal sum to 1."
+  [sg]
+  (map-v (fn [rules]
+           (let [sum (reduce + (vals rules))]
+             (map-v #(/ % sum) rules)))
+         sg))
 
 (defn- slice-component
   "Given an SCFG `sg` and a sequence of non-terminals `nts` returns a new
@@ -204,8 +213,8 @@
 (defn- make-strongly-consistent*
   "Helper function to make the given mutable SCFG strongly consistent. It
   assumes there is only one strongly connected component in the expectation
-  graph of `sg`."
-  [sg]
+  graph of `sg`. Rate of convergence is given by `rate."
+  [rate sg]
   (let [best-ps
         (->> sg scfg->cfg
              best-rules
@@ -213,13 +222,15 @@
              delay)]
     (while (not (strongly-consistent? (freeze! sg)))
       (doseq [p (force best-ps)]
-        (swap! p * 2))
+        (swap! p * rate))
       (normalize! sg))))
 
 (defn make-strongly-consistent
-  "Make the SCFG `sg` strongly consistent."
-  [sg]
-  (let [sg* (make-mutable! sg)]
-    (doseq [sub-g (componentize sg*)]
-      (make-strongly-consistent* sub-g))
-    (freeze! sg*)))
+  "Make the SCFG `sg` strongly consistent. If `sg` is not strongly consistent,
+  converge on a solution with rate `rate` (defaulting to 2)."
+  ([sg] (make-strongly-consistent 2 sg))
+  ([rate sg]
+   (let [sg* (make-mutable! sg)]
+     (doseq [sub-g (componentize sg*)]
+       (make-strongly-consistent* rate sub-g))
+     (freeze! sg*))))
