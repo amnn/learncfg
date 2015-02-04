@@ -108,6 +108,17 @@
     (when (seq input)
       (read-string (str \[ input \])))))
 
+(defn present-samples
+  "Print the given vector of `samples` and ask the user to pick one."
+  [samples]
+  (doseq [[i toks] (map vector (iterate inc 1) samples)]
+    (println (format "%-2d. %s" i toks)))
+  (print "Blank for yes, index of counter-example for no: ")
+  (flush)
+  (let [input (read-line)]
+    (when (seq input)
+      (get samples (dec (read-string input))))))
+
 (defn sample-counter
   "A `counter*` predicate that gives the user `n` samples from the grammar and
   interactively asks the user if they are all correct. If they are not, the
@@ -121,14 +132,7 @@
         false-neg
 
         (do (println "Are these samples correct?")
-            (let [tss (scfg-sample g n)]
-              (doseq [[i toks] (map vector (iterate inc 1) tss)]
-                (println (format "%-2d. %s" i toks)))
-              (print "Blank for yes, index of counter-example for no: ")
-              (flush)
-              (let [input (read-line)]
-                (when (seq input)
-                  (get tss (dec (read-string input)) nil)))))))))
+            (present-samples (scfg-sample g n)))))))
 
 (defn interactive-member
   "A form of the `member*` predicate used by the k-bounded learning algorithm
