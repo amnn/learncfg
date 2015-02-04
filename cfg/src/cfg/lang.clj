@@ -370,6 +370,10 @@
 
       :rule first))))
 
+(defn ml-p
+  "Returning the probability of generating `ts` with SCFG `sg`."
+  [sg ts] (or (:p (ml-tree sg ts)) 0.0))
+
 (defrecord ^:private MultiPBranch [nt yield p children])
 (defrecord ^:private MultiPLeaf   [nt yield p children])
 

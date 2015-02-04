@@ -189,6 +189,28 @@
                       :A {[A]     1.0}}
                     '[A A])))))
 
+(deftest ml-p-test
+  (testing "non-existent parse"
+    (is (= 0.0 (ml-p '{:S {[A] 1.0}} '[B]))))
+
+  (testing "terminals"
+    (is (= 1.0 (ml-p '{:S {[A] 1.0}} '[A]))))
+
+  (testing "unambiguous grammar"
+    (is (= 0.25
+           (ml-p '{:S {[:A :S] 0.5
+                       [A]     0.5}
+                   :A {[A]     1.0}}
+                 '[A A]))))
+
+  (testing "ambiguous grammar"
+    (is (= 0.0625
+           (ml-p '{:S {[:A :S] 0.25
+                       [:S :S] 0.5
+                       [A]     0.25}
+                   :A {[A]     1.0}}
+                 '[A A])))))
+
 (deftest inside-p-tree
   (testing "terminals"
     (is (= #cfg.lang.MultiPLeaf[:S [A] 1.0 #{[[:S A]]}]
