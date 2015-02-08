@@ -11,6 +11,8 @@
             [clojure.set :refer [intersection]]
             [clojure.pprint]))
 
+(def ^{:private true :dynamic true} *debug* true)
+
 (defn- init-weights
   "Create an initial classifier for a grammar with non-terminals `nts` and
   terminals `ts`."
@@ -111,15 +113,16 @@
     (classifier->likelihood likelihoods classifier)
     (loop []
       (let [sg (snapshot! prune-p likelihoods)]
-        (println "\n\n*** LOOP ***\n")
-        (println "*** SNAPSHOT")
-        (clojure.pprint/pprint sg)
+        (when *debug*
+          (println "\n\n*** LOOP ***\n")
+          (println "*** SNAPSHOT")
+          (clojure.pprint/pprint sg)
 
-        (println "*** LIKELIHOOD")
-        (clojure.pprint/pprint likelihoods)
+          (println "*** LIKELIHOOD")
+          (clojure.pprint/pprint likelihoods)
 
-        (println "*** CLASSIFIER")
-        (clojure.pprint/pprint classifier)
+          (println "*** CLASSIFIER")
+          (clojure.pprint/pprint classifier))
 
         (if-let [[type toks] (counter* sg)]
           (do (println [type toks])
