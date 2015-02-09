@@ -82,7 +82,9 @@
   [g ts corpus
    & {:keys [entropy prune-p
              lr-rate sc-rate
-             verbose? samples]}]
+             verbose? samples
+             kernel]
+      :or {kernel cnf-rk}}]
   (let [member*
         (fn [nt yield]
           (boolean
@@ -90,7 +92,7 @@
 
         nts (keys g)]
     (sample-test-rig
-     #(klr-learn cnf-rk
+     #(klr-learn kernel
                  %1 %2 nts ts
                  :entropy entropy
                  :prune-p prune-p
@@ -124,8 +126,9 @@
      [L L L R R R] [L R L L R R]
      [L L R R L R] [L L R L R R]]
    :verbose? true
-   :entropy  0.8
-   :lr-rate  0.3
+   :kernel   id-k
+   :entropy  0.5
+   :lr-rate  0.5
    :prune-p  0.3
    :sc-rate  2
-   :samples  20))
+   :samples  30))
