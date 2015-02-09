@@ -157,6 +157,11 @@
            (ss rs1) (ss rs2))
           count (/ 4.0)))))
 
+(defn id-k
+  "A kernel that returns 1.0 if the two given rules are exactly identical, and
+  0.0 otherwise. (The Hilbert Space has a dimension for each rule)."
+  [r1 r2] (if (= r1 r2) 1.0 0.0))
+
 (defn- scfg-sample
   [sg n] (vec (repeatedly n #(sample sg))))
 
