@@ -11,7 +11,7 @@
             [clojure.set :refer [intersection]]
             [clojure.pprint]))
 
-(def ^{:private true :dynamic true} *debug* true)
+(def ^{:private true :dynamic true} *debug* false)
 
 (defn- init-weights
   "Create an initial classifier for a grammar with non-terminals `nts` and
@@ -125,7 +125,7 @@
           (clojure.pprint/pprint classifier))
 
         (if-let [[type toks] (counter* sg)]
-          (do (println [type toks])
+          (do (when *debug* (println [type toks]))
               (case type
                 :+ (learn lr-rate classifier
                           (diagnose member* (ml-tree sg toks)) 0.0)
@@ -133,7 +133,7 @@
               (recur))
           sg)))))
 
-(defn- cnf-rk
+(defn cnf-rk
   "A kernel to compare rules of a context-free grammar in CNF.
 
    * Rules are considered orthogonal if their LHS is different.
@@ -160,22 +160,22 @@
 (defn- scfg-sample
   [sg n] (vec (repeatedly n #(sample sg))))
 
-(defn- sample-counter
+(defn sample-counter
   "A version of the `counter*` predicate that presents the user with `n`
   samples. Similar to `sample-counter` for the regular k-bounded algorithm, but
   also labels the returned value with whether it is a false-positive or a
   false negative."
-  [sc-rate n corpus]
-  (fn [sg]
-    (if-let [false-neg
-             (some #(when-not (pos? (ml-p sg %)) %)
-                   corpus)]
-      [:- false-neg]
+  ([sc-rate n corpus] (sample-counter sc-rate n corpus present-samples))
 
-      (do (println "Are these samples correcty?")
-          (let [sg* (make-strongly-consistent sc-rate sg)]
-            (when-let [false-pos (present-samples (scfg-sample sg* n))]
-              [:+ false-pos]))))))
+  ([sc-rate n corpus sample-tester]
+   (fn [sg]
+     (if-let [false-neg
+              (some #(when-not (pos? (ml-p sg %)) %)
+                    corpus)]
+       [:- false-neg]
+       (let [sg* (make-strongly-consistent sc-rate sg)]
+         (when-let [false-pos (sample-tester (scfg-sample sg* n))]
+           [:+ false-pos]))))))
 
 (defn sample-klr-learn
   "Interactively learn a grammar given a `corpus`, set of terminals `ts` and a
@@ -187,18 +187,21 @@
   [nts ts corpus & {:keys [entropy lr-rate prune-p
                            sc-rate samples]}]
   {:pre [(< 1 sc-rate)]}
-  (klr-learn cnf-rk
-             interactive-member
-             (sample-counter sc-rate samples corpus)
-             nts ts
-             :entropy entropy
-             :lr-rate lr-rate
-             :prune-p prune-p))
+  (klr-learn
+   cnf-rk
+   interactive-member
+   (sample-counter
+    sc-rate samples corpus)
+   nts ts
+   :entropy entropy
+   :lr-rate lr-rate
+   :prune-p prune-p))
 
 (comment
-  (sample-klr-learn [:S :L :R] '[L R]
-                    '[[L R] [L R L R] [L L R R]
-                      [L L L R R R] [L R L L R R]
-                      [L L R R L R] [L L R L R R]]
-                    :entropy 0.8 :lr-rate 0.1 :prune-p 0.4
-                    :sc-rate 2   :samples 20))
+  (sample-klr-learn
+   [:S :L :R] '[L R]
+   '[[L R] [L R L R] [L L R R]
+     [L L L R R R] [L R L L R R]
+     [L L R R L R] [L L R L R R]]
+   :entropy 0.8 :lr-rate 0.1 :prune-p 0.4
+   :sc-rate 2   :samples 20))

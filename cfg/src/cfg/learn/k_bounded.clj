@@ -111,6 +111,7 @@
 (defn present-samples
   "Print the given vector of `samples` and ask the user to pick one."
   [samples]
+  (println "Are these samples correct?")
   (doseq [[i toks] (map vector (iterate inc 1) samples)]
     (println (format "%-2d. %s" i toks)))
   (print "Blank for yes, index of counter-example for no: ")
@@ -120,19 +121,24 @@
       (get samples (dec (read-string input))))))
 
 (defn sample-counter
-  "A `counter*` predicate that gives the user `n` samples from the grammar and
-  interactively asks the user if they are all correct. If they are not, the
-  user should return the index of the bad string."
-  [n corpus]
-  (fn [g]
-    (let [il? (in-lang g)]
-      (if-let [false-neg (->> corpus
-                              (filter (complement il?))
-                              first)]
-        false-neg
+  "A `counter*` predicate that ensures every word in `corpus` is recognised by
+  the given grammar. If not, then the offending word is returned.
 
-        (do (println "Are these samples correct?")
-            (present-samples (scfg-sample g n)))))))
+  Otherwise, generates samples from the grammar, and passes them on to the
+  `sample-tester` which should return a false-positive from the samples, if one
+  exists, otherwise `nil`. By default `sample-tester` presents the samples to
+  the user and asks them to indicate a false-positive."
+  ([n corpus] (sample-counter n corpus present-samples))
+
+  ([n corpus sample-tester]
+   (fn [g]
+     (let [il? (in-lang g)]
+       (if-let [false-neg (->> corpus
+                               (filter (complement il?))
+                               first)]
+         false-neg
+         (sample-tester
+          (scfg-sample g n)))))))
 
 (defn interactive-member
   "A form of the `member*` predicate used by the k-bounded learning algorithm
