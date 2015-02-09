@@ -79,7 +79,7 @@
   As well as a list of non-terminals `nts`, and attempts to learn a grammar
   with non-terminals in `nts` and rules governed by the responses from queries
   to `counter*` and `member*`."
-  [counter* member* nts]
+  [member* counter* nts]
   (let [member* (memoize member*)]
     (loop [g (init-grammar nts), blacklist #{}]
       (let [pg (prune-cfg g)]
@@ -152,13 +152,14 @@
   ^{:doc "A specialisation of the learning algorithm that treats the user as
          the oracle"}
   (partial learn
-           interactive-counter
-           interactive-member))
+           interactive-member
+           interactive-counter))
 
 (defn sample-learn
   "A variant of `interactive-learn` in which the user is presented with
   samples, rather than the grammar, when asked to produce counter-examples.
   Additionally, false-negatives are removed using a corpus of positive data."
   [n corpus nts]
-  (learn (sample-counter n corpus)
-         interactive-member nts))
+  (learn interactive-member
+         (sample-counter n corpus)
+         nts))
