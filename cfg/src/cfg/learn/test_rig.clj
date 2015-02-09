@@ -1,6 +1,6 @@
 (ns cfg.learn.test-rig
-  (:require [cfg.learn.klr-k-bounded :refer [klr-learn cnf-rk
-                                             sample-counter]]
+  (:require [cfg.learn.k-bounded :as kb]
+            [cfg.learn.klr-k-bounded :refer [klr-learn cnf-rk id-k] :as klr-kb]
             [cfg.lang :refer [parse-trees]]))
 
 (defn- inject-counter
@@ -65,6 +65,19 @@
       :member-calls  @member-calls
       :counter-calls @counter-calls})))
 
+(defn k-bounded-rig
+  [g corpus & {:keys [verbose? samples]}]
+  (let [member*
+        (fn [nt yield]
+          (boolean
+           (parse-trees g nt yield)))
+
+        nts (keys g)]
+    (sample-test-rig
+     #(kb/learn %1 %2 nts)
+     member* kb/sample-counter
+     samples corpus verbose?)))
+
 (defn klr-k-bounded-rig
   [g ts corpus
    & {:keys [entropy prune-p
@@ -83,17 +96,29 @@
                  :prune-p prune-p
                  :lr-rate lr-rate)
      member*
-     (partial sample-counter
+     (partial klr-kb/sample-counter
               sc-rate)
      samples corpus verbose?)))
 
 (comment
-  ;; Balanced parentheses
+  ;; Balanced Parens
+  (k-bounded-rig
+   (cfg
+    (:S => :L :R | :S :S)
+    (:L => L | :L :S | :S :L)
+    (:R => R | :R :S | :S :R))
+
+   '[[L R] [L R L R] [L L R R]
+     [L L L R R R] [L R L L R R]
+     [L L R R L R] [L L R L R R]]
+   :verbose? true
+   :samples 30)
+
   (klr-k-bounded-rig
    (cfg
-    (:S => :L :R)
-    (:L => L | :L :S)
-    (:R => R | :R :S))
+    (:S => :L :R | :S :S)
+    (:L => L | :L :S | :S :L)
+    (:R => R | :R :S | :S :R))
    '[L R]
    '[[L R] [L R L R] [L L R R]
      [L L L R R R] [L R L L R R]
