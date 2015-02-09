@@ -47,19 +47,21 @@
 
   ([learn member* counter* n corpus verbose?]
    (let [counter-calls (atom 0)
-         member-calls  (atom 0)]
-     {:grammar (learn
-                (cond->> member*
-                  :always  (inject-counter member-calls)
-                  verbose? (inject-printer member-print))
+         member-calls  (atom 0)
 
-                (cond->> (counter* n corpus
-                                   (fn [samples]
-                                     (some #(when-not (member* :S %) %)
-                                           (sort-by count samples))))
-                  :always  (inject-counter counter-calls)
-                  verbose? (inject-printer counter-print)))
+         result
+         (learn
+          (cond->> member*
+            :always  (inject-counter member-calls)
+            verbose? (inject-printer member-print))
 
+          (cond->> (counter* n corpus
+                             (fn [samples]
+                               (some #(when-not (member* :S %) %)
+                                     (sort-by count samples))))
+            :always  (inject-counter counter-calls)
+            verbose? (inject-printer counter-print)))]
+     {:grammar       result
       :member-calls  @member-calls
       :counter-calls @counter-calls})))
 
