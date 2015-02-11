@@ -129,6 +129,95 @@
    :kernel   id-k
    :entropy  0.5
    :lr-rate  0.5
-   :prune-p  0.3
+   :prune-p  0.4
+   :sc-rate  2
+   :samples  30)
+
+  ;; (AB)+
+  (k-bounded-rig
+   (cfg
+    (:S  => :S :S | :A :B)
+    (:A  => A)
+    (:B  => B))
+   '[[A B] [A B A B]
+     [A B A B A B]
+     [A B A B A B A B]]
+   :verbose? true
+   :samples  30)
+
+  (klr-k-bounded-rig
+   (cfg
+    (:S  => :S :S | :A :B)
+    (:A  => A)
+    (:B  => B))
+   '[A B]
+   '[[A B] [A B A B]
+     [A B A B A B]
+     [A B A B A B A B]]
+   :verbose? true
+   :kernel   id-k
+   :entropy  0.5
+   :lr-rate  0.5
+   :prune-p  0.4
+   :sc-rate  2
+   :samples  30)
+
+  ;; A^nB^n
+  (k-bounded-rig
+   (cfg
+    (:S  => :A :S*)
+    (:S* => B | :S :B)
+    (:A => A) (:B => B))
+   '[[A B] [A A B B]
+     [A A A B B B]
+     [A A A A B B B B]]
+   :verbose? true
+   :samples 30)
+
+  (klr-k-bounded-rig
+   (cfg
+    (:S  => :A :S*)
+    (:S* => B | :S :B)
+    (:A => A) (:B => B))
+   '[A B]
+   '[[A B] [A A B B]
+     [A A A B B B]
+     [A A A A B B B B]]
+   :verbose? true
+   :kernel   id-k
+   :entropy  0.5
+   :lr-rate  0.5
+   :prune-p  0.4
+   :sc-rate  2
+   :samples  30)
+
+  ;; A^nB^mC^(n+m)
+  (k-bounded-rig
+   (cfg
+    (:S  => :A :S+ | :B :S+)
+    (:S+ => :S :C | C)
+    (:A  => A) (:B => B) (:C => C))
+   '[[A C] [B C]
+     [A A C C] [A B C C] [B B C C]
+     [A A A C C C] [A A B C C C]
+     [A B B C C C] [B B B C C C]]
+   :verbose? true
+   :samples  30)
+
+  (klr-k-bounded-rig
+   (cfg
+    (:S  => :A :S+ | :B :S+)
+    (:S+ => :S :C | C)
+    (:A  => A) (:B => B) (:C => C))
+   '[A B C]
+   '[[A C] [B C]
+     [A A C C] [A B C C] [B B C C]
+     [A A A C C C] [A A B C C C]
+     [A B B C C C] [B B B C C C]]
+   :verbose? true
+   :kernel   id-k
+   :entropy  0.5
+   :lr-rate  0.5
+   :prune-p  0.4
    :sc-rate  2
    :samples  30))
