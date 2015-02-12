@@ -107,24 +107,24 @@
   (k-bounded-rig
    (cfg
     (:S => :L :R | :S :S)
-    (:L => L | :L :S | :S :L)
-    (:R => R | :R :S | :S :R))
+    (:L => < | :L :S | :S :L)
+    (:R => < | :R :S | :S :R))
 
-   '[[L R] [L R L R] [L L R R]
-     [L L L R R R] [L R L L R R]
-     [L L R R L R] [L L R L R R]]
+   '[[< >] [< > < >] [< < > >]
+     [< < < > > >] [< > < < > >]
+     [< < > > < >] [< < > < > >]]
    :verbose? true
    :samples 30)
 
   (klr-k-bounded-rig
    (cfg
     (:S => :L :R | :S :S)
-    (:L => L | :L :S | :S :L)
-    (:R => R | :R :S | :S :R))
-   '[L R]
-   '[[L R] [L R L R] [L L R R]
-     [L L L R R R] [L R L L R R]
-     [L L R R L R] [L L R L R R]]
+    (:L => < | :L :S | :S :L)
+    (:R => > | :R :S | :S :R))
+   '[< >]
+   '[[< >] [< > < >] [< < > >]
+     [< < < > > >] [< > < < > >]
+     [< < > > < >] [< < > < > >]]
    :verbose? true
    :kernel   id-k
    :entropy  0.5
@@ -219,5 +219,31 @@
    :entropy  0.5
    :lr-rate  0.5
    :prune-p  0.4
+   :sc-rate  2
+   :samples  30)
+
+  ;; Mathematical Expressions
+  (klr-k-bounded-rig
+   (cfg
+    (:S  => :V :S1 | :L :S2)
+    (:S1 => :OP :S) (:S2 => :S :R)
+    (:OP => + | *)
+    (:L  => <) (:R  => >)
+    (:V  => VAR | NUM))
+
+   '[+ * < > NUM VAR]
+
+   '[[NUM] [VAR]
+     [< NUM >] [< VAR >]
+     [NUM + VAR] [VAR + NUM] [NUM + NUM] [VAR + VAR]
+     [NUM * VAR] [VAR * NUM] [NUM * NUM] [VAR * VAR]
+     [< NUM + VAR >]
+     [NUM + NUM + NUM] [VAR + VAR + VAR]
+     [NUM * VAR + NUM] [NUM * < VAR + NUM >]]
+   :verbose? true
+   :kernel   id-k
+   :entropy  0.5
+   :lr-rate  0.5
+   :prune-p  0.49
    :sc-rate  2
    :samples  30))
