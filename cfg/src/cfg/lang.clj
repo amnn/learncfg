@@ -230,6 +230,8 @@
          (mapcat #(get-in % [:complete success-key]))
          (map first))))
 
+(defrecord ^:private Terminal [t])
+
 (defn- parse-tree*
   "Generalisation of the CYK algorithm, for calculating the parse trees of
   CNF grammars (see `(doc parse-tree)` for details), wherein, the following
@@ -272,12 +274,19 @@
                           :let [[t :as yield] (subtok j 1)]]
                       [j (into {} (for [[nt l] (get t-map t)]
                                     [nt (->leaf nt l yield)]))]))}
+        child
+        (fn [p len start sym]
+          (if (terminal? sym)
+            (when (and (= len 1)
+                       (= (get-in toks start) sym))
+              (->Terminal sym))
+            (get-in p [len start sym])))
 
         build-partial
         (fn [p [i j k branch]]
           (let        [[a b c]  (rule branch)]
-            (if-let   [bt       (get-in p [k j b])]
-              (if-let [ct       (get-in p [(- i k) (+ j k) c])]
+            (if-let   [bt       (child p k j b)]
+              (if-let [ct       (child p (- i k) (+ j k) c)]
                 (let  [new-node (->branch a branch (subtok j i) bt ct)]
                   (if-let [node (get-in p [i j a])]
                     (update-in p [i j a] merge-fn new-node)

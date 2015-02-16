@@ -112,6 +112,19 @@
            (lang-seq (cfg (:S => A | B C | D E F)))))))
 
 (deftest parse-trees-test
+  (testing "loosened CNF form"
+    (let [g (cfg (:S => A :S | A))]
+      (is (= nil (parse-trees g '[B])))
+
+      (is (= #cfg.lang.MultiLeaf[:S [A] #{[[:S A]]}]
+             (parse-trees g '[A])))
+
+      (is (= #cfg.lang.MultiBranch
+             [:S [A A]
+              #{[[:S A :S]
+                 #cfg.lang.Terminal[A]
+                 #cfg.lang.MultiLeaf[:S [A] #{[[:S A]]}]]}]))))
+
   (testing "left recursion"
     (let [g (cfg (:S => :A :S | A)
                  (:A => A))]
