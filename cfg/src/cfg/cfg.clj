@@ -26,6 +26,10 @@
   [rs] (and (= 2 (count rs))
             (every? non-terminal? rs)))
 
+(defn branch*?
+  "Does the given rule qualify as a branch rule? (precisely two children)."
+  [rs] (= 2 (count rs)))
+
 (defn cnf-leaf?
   "Does the given rule (in the format returned by rule-seq) qualify as the
   leaf rule of a CNF grammar."
@@ -35,6 +39,11 @@
   "Does the given rule (in the format returned by rule-seq) qualify as the
   branch rule of a CNF grammar."
   [[_ & rs]] (cnf-branch*? rs))
+
+(defn branch?
+  "Does the given rule (in the format returned by rule-seq) qualify as a
+  branch rule."
+  [[_ & rs]] (branch*? rs))
 
 ;;;;;;;;;; Accessors ;;;;;;;;;;
 
