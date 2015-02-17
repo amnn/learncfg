@@ -177,10 +177,7 @@
    :samples  30)
 
   (klr-k-bounded-rig
-   (cfg
-    (:S  => :S :S | :A :B)
-    (:A  => A)
-    (:B  => B))
+   (cfg (:S  => :S :S | A B))
    '[A B]
    '[[A B] [A B A B]
      [A B A B A B]
@@ -207,9 +204,8 @@
 
   (klr-k-bounded-rig
    (cfg
-    (:S  => :A :S*)
-    (:S* => B | :S :B)
-    (:A => A) (:B => B))
+    (:S  => A :S*)
+    (:S* => B | :S B))
    '[A B]
    '[[A B] [A A B B]
      [A A A B B B]
@@ -237,9 +233,8 @@
 
   (klr-k-bounded-rig
    (cfg
-    (:S  => :A :S+ | :B :S+)
-    (:S+ => :S :C | C)
-    (:A  => A) (:B => B) (:C => C))
+    (:S  => A :S+ | B :S+)
+    (:S+ => :S C | C))
    '[A B C]
    '[[A C] [B C]
      [A A C C] [A B C C] [B B C C]
@@ -256,11 +251,8 @@
   ;; Mathematical Expressions
   (klr-k-bounded-rig
    (cfg
-    (:S  => :V :S1 | :L :S2)
-    (:S1 => :OP :S) (:S2 => :S :R)
-    (:OP => + | *)
-    (:L  => <) (:R  => >)
-    (:V  => VAR | NUM))
+    (:S  => VAR | NUM | VAR :S1 | NUM :S1 | < :S2)
+    (:S1 => + :S | * :S) (:S2 => :S >))
 
    '[+ * < > NUM VAR]
 

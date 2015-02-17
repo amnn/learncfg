@@ -6,52 +6,61 @@
                               sample] :as scfg]
             [cfg.lang :refer [ml-tree ml-p]]
             [cfg.prune :refer [prune-scfg]]
-            [cfg.logistic-regression :refer [mk-classifier learn sigmoid logit]]
+            [cfg.logistic-regression :refer [mk-classifier learn sigmoid logit
+                                             delta-sigmoid]]
             [cfg.learn.k-bounded :refer [interactive-member present-samples]]
             [clojure.set :refer [intersection]]
             [clojure.pprint]))
 
 (def ^{:private true :dynamic true} *debug* false)
 
-(defn- init-weights
-  "Create an initial classifier for a grammar with non-terminals `nts` and
-  terminals `ts`."
-  [nts ts]
-  (into {}
-        (concat
-         (for [a nts, b nts, c nts]
-           [[a b c] (atom 0.0)])
-         (for [a nts, t ts]
-           [[a t]   (atom 0.0)]))))
-
 (defn- init-likelihoods
   "Create an initial mutable SCFG for non-terminals `nts`, and terminals `ts`.
   Initially, all with likelihood 0.5."
   [nts ts]
-  (let [rules (concat (map list ts)
-                      (for [b nts, c nts]
+  (let [children (concat nts ts)
+        rules (concat (map list ts)
+                      (for [b children
+                            c children]
                         (list b c)))]
     (->> (mapcat (fn [nt] (map #(cons nt %) rules)) nts)
          (reduce (fn [sg r] (scfg/add-rule sg r 0.5)) {})
          make-mutable!)))
 
+(defn- init-weights
+  "Return a map from rules in `rs` to mutable weights, all initialised to
+  `0.0`."
+  [rs]
+  (into {} (for [[r _] rs]
+             [r (atom 0.0)])))
+
 (defn- classifier->likelihood
-  "Link the classifier `c` to the mutable SCFG `sg` such that when the
-  coefficients of the classifier are altered."
-  [sg {:keys [K ws]}]
+  "Link the classifier `c` to the rule sequence `rs` from a mutable SCFG of
+  likelihoods such that when the coefficients of the classifier are altered."
+  [rs {:keys [K ws]}]
   (doseq [[r* atm-a] ws]
-    (let [likelihoods
-          (for [[r lh] (scfg/rule-seq sg)
+    (let [affected-rules
+          (for [[r lh] rs
                 :let [k (K r r*)]
                 :when (not (zero? k))]
             [lh k])]
       (add-watch atm-a :likelihood
                  (fn [_ _ old-a new-a]
-                   (doseq [[lh* k] likelihoods]
-                     (swap! lh* (fn [lh]
-                                  (->> (logit lh)
-                                       (+ (* (- new-a old-a) k))
-                                       sigmoid)))))))))
+                   (doseq [[lh* k] affected-rules]
+                     (swap! lh* (partial delta-sigmoid
+                                         (* old-a k)
+                                         (* new-a k)))))))))
+
+(defn- init-classifier
+  "Create a new classifier with kernel `K`, linked to the mutable likelihood
+  SCFG `sg`."
+  [sg K]
+  (let [rs (scfg/rule-seq sg)
+        ws (init-weights rs)
+        classifier (mk-classifier K ws)]
+    (classifier->likelihood rs classifier)
+    classifier))
+
 
 (defn- snapshot!
   "Convert the given mutable SCFG `sg`, into an immutable SCFG where rules with
@@ -71,7 +80,8 @@
   [member* t]
   (letfn [(children [t]
             (when (and (:lt t) (:rt t))
-              ((juxt :lt :rt) t)))]
+              (remove #(instance? cfg.lang.Terminal %)
+               ((juxt :lt :rt) t))))]
     (loop [{:keys [rule] :as t} t]
       (if-let [c (some
                   (fn [{:keys [nt yield] :as c}]
@@ -108,9 +118,8 @@
   [K member* counter* nts ts & {:keys [entropy lr-rate prune-p]}]
   {:pre [(< 0 entropy 1) (< 0 lr-rate) (< 0 prune-p 1/2)]}
 
-  (let [classifier  (mk-classifier K (init-weights nts ts))
-        likelihoods (init-likelihoods nts ts)]
-    (classifier->likelihood likelihoods classifier)
+  (let [likelihoods (init-likelihoods nts ts)
+        classifier  (init-classifier likelihoods K)]
     (loop []
       (let [sg (snapshot! prune-p likelihoods)]
         (when *debug*

@@ -3,7 +3,7 @@
             [clojure.set :refer [union]]
             [clojure.core.reducers :as r]
             [cfg.cfg :refer [add-rule terminal? non-terminal?
-                             cnf-branch?] :as cfg]
+                             loosened-cnf-branch?] :as cfg]
             [cfg.scfg :as scfg]
             [cfg.coll-util :refer [queue]]))
 
@@ -230,7 +230,7 @@
          (mapcat #(get-in % [:complete success-key]))
          (map first))))
 
-(defrecord ^:private Terminal [t])
+(defrecord Terminal [t])
 
 (defn- parse-tree*
   "Generalisation of the CYK algorithm, for calculating the parse trees of
@@ -278,7 +278,7 @@
         (fn [p len start sym]
           (if (terminal? sym)
             (when (and (= len 1)
-                       (= (get-in toks start) sym))
+                       (= (get toks start) sym))
               (->Terminal sym))
             (get-in p [len start sym])))
 
@@ -323,7 +323,7 @@
 
   ([g root ts]
    (let [{branches true leaves false}
-         (group-by cnf-branch?
+         (group-by loosened-cnf-branch?
                    (cfg/rule-seq g))]
      (parse-tree*
       :branches branches, :leaves leaves
@@ -358,7 +358,7 @@
 
   ([sg root ts]
    (let [{branches true leaves false}
-         (group-by (comp cnf-branch? first)
+         (group-by (comp loosened-cnf-branch? first)
                    (scfg/rule-seq sg))]
      (parse-tree*
       :branches branches, :leaves leaves
@@ -366,7 +366,7 @@
 
       :->branch
       (fn [nt [rule p] yield lt rt]
-        (->PBranch nt rule (* p (:p lt) (:p rt))
+        (->PBranch nt rule (* p (or (:p lt) 1.0) (or (:p rt) 1.0))
                    yield lt rt))
 
       :->leaf
@@ -395,7 +395,7 @@
 
   ([sg root ts]
    (let [{branches true leaves false}
-         (group-by (comp cnf-branch? first)
+         (group-by (comp loosened-cnf-branch? first)
                    (scfg/rule-seq sg))]
      (parse-tree*
       :branches branches, :leaves leaves

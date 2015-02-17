@@ -6,6 +6,11 @@
 (defn logit [x]
   (Math/log (/ x (- 1 x))))
 
+(defn delta-sigmoid [old-val new-val x]
+  (->> (logit x)
+       (+ (- new-val old-val))
+       sigmoid))
+
 (defrecord ^:private Classifier
   [K ws])
 

@@ -36,6 +36,15 @@
   branch rule of a CNF grammar."
   [[_ & rs]] (cnf-branch*? rs))
 
+(defn loosened-cnf-branch*?
+  "Does the given rule qualify as the branch rule of a loosened CNF grammar."
+  [rs] (= 2 (count rs)))
+
+(defn loosened-cnf-branch?
+  "Does the given rule (in the format returned by rule-seq) qualify as the
+  branch rule of a loosened CNF grammar."
+  [[_ & rs]] (loosened-cnf-branch*? rs))
+
 ;;;;;;;;;; Accessors ;;;;;;;;;;
 
 (def ^{:doc "returns the LHS of a rule"} non-terminal first)
