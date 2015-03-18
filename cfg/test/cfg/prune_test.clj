@@ -40,7 +40,12 @@
     (is (= #{:S}
            (contributing-nts
              '{:S #{[A] [:B]}
-               :T #{[A :B]}})))))
+               :T #{[A :B]}}))))
+
+  (testing "cyclic rules"
+    (is (= #{}
+           (contributing-nts
+            '{:S #{[:S]}})))))
 
 (deftest prune-cfg-test
   (testing "no superfluous grammars"
