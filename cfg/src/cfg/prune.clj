@@ -2,7 +2,7 @@
   (:require [cfg.coll-util :refer [queue]]
             [cfg.sat :refer [horn-sat]]
             [cfg.cfg :refer [terminal? non-terminal?
-                             non-terminal filterr] :as cfg]
+                             non-terminal pattern filterr] :as cfg]
             [cfg.scfg :as scfg]))
 
 (defn reachable-nts
@@ -32,7 +32,10 @@
   language, and all the rules that are not reachable from the start symbol."
   [g]
   (let [cnts         (contributing-nts g)
-        contributes? (partial every? #(or (terminal? %) (cnts %)))
+        contributes? (fn [rule]
+                       (and (cnts (non-terminal rule))
+                            (every? #(or (terminal? %) (cnts %))
+                                    (pattern rule))))
         g*           (filterr contributes? g)
         rnts         (reachable-nts g*)]
     (filterr (comp rnts non-terminal) g*)))
