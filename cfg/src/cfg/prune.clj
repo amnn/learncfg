@@ -13,14 +13,13 @@
   ([g nt]
    (loop [q   (queue nt)
           nts (transient #{})]
-     (if (seq q)
-       (let [current-nt (peek q)]
-         (if-not (nts current-nt)
-           (recur (into (pop q)
-                        (->> (get g current-nt)
-                             (mapcat #(filter non-terminal? %))))
-                  (conj! nts current-nt))
-           (recur (pop q) nts)))
+     (if-let [current-nt (peek q)]
+       (if-not (nts current-nt)
+         (recur (into (pop q)
+                      (->> (get g current-nt)
+                           (mapcat #(filter non-terminal? %))))
+                (conj! nts current-nt))
+         (recur (pop q) nts))
        (persistent! nts)))))
 
 (defn contributing-nts

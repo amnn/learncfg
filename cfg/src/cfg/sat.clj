@@ -11,13 +11,13 @@
     (loop [q   (apply queue (get sat-graph nil))
            nts (transient #{})]
       (if-let [nt (peek q)]
-        (if (nts nt)
-          (recur (pop q) nts)
+        (if-not (nts nt)
           (recur
-           (->> (sat-graph nt)
-                (keep #(let [{:keys [not-visited nt]}
-                             (visit-rule %)]
-                         (when (zero? not-visited) nt)))
-                (into (pop q)))
-           (conj! nts nt)))
+           (into (pop q)
+                 (->> (sat-graph nt)
+                      (keep #(let [{:keys [not-visited nt]}
+                                   (visit-rule %)]
+                               (when (zero? not-visited) nt)))))
+           (conj! nts nt))
+          (recur (pop q) nts))
         (persistent! nts)))))
