@@ -25,21 +25,22 @@
                   (map no-hops)
                   (into (priority-map)))]
       (if-let [[nt hops] (peek q)]
-        (let [old-hops (get counts nt)]
-          (if-not (and old-hops
-                       (< old-hops hops))
-            (let [new-counts (assoc! counts nt hops)
-                  step-count #(inc (->> % (filter non-terminal?)
-                                        (map new-counts) (reduce +)))]
+        (let [c-hops (get counts nt)]
+          (if (and c-hops (< c-hops hops))
+            (recur counts (pop q))
+            (let [new-counts (assoc! counts nt hops)]
               (recur
-                new-counts
-                (->> (hop-graph nt)
-                     (keep #(let [{:keys [not-visited nt rule]}
-                                  (visit-rule %)]
-                              (when (zero? not-visited)
-                                [nt (step-count rule)])))
-                     (into (pop q)))))
-            (recur counts (pop q))))
+               new-counts
+               (into (pop q)
+                     (for [r (hop-graph nt)
+                           :let  [old-hops (get q (:nt @r))]
+                           :when (or (not old-hops) (> old-hops hops))
+                           :let  [{:keys [not-visited nt rule]}
+                                  (visit-rule r)]
+                           :when (zero? not-visited)]
+                       [nt (->> (filter non-terminal? rule)
+                                (map new-counts)
+                                (reduce +) inc)]))))))
         (persistent! counts)))))
 
 (defn best-rules

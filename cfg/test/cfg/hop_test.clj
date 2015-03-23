@@ -18,6 +18,20 @@
            {:S 3,  :A  1, :B  1, :C  1, :D  1, :E  2,
             :A1 0, :B1 0, :C1 0, :D1 0, :E1 1, :E2 0})))
 
+  (testing "re-assign queued non-terminal poorly"
+    (is (= (hop-counts
+            (cfg (:S => :A :B | :C)
+                 (:A => a) (:B => b)
+                 (:C => :A)))
+           {:A 0 :B 0 :C 1 :S 1}))
+
+    (is (= (hop-counts
+            (cfg (:S => :E :D)
+                 (:A => a) (:B => b)
+                 (:C => :A) (:D => :A :B | :C)
+                 (:E => :C)))
+           {:A 0 :B 0 :C 1 :D 1 :E 2 :S 4})))
+
   (testing "tree like structures"
     (is (= (hop-counts
              (cfg (:S => :A :B)
