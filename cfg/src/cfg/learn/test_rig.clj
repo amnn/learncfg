@@ -1,7 +1,24 @@
 (ns cfg.learn.test-rig
-  (:require [cfg.learn.k-bounded :as kb]
+  (:require [bigml.sampling.simple :as simple]
+            [cfg.learn.k-bounded :as kb]
             [cfg.learn.klr-k-bounded :refer [klr-learn cnf-rk id-k] :as klr-kb]
             [cfg.lang :refer [parse-trees]]))
+
+(defn- inject-error
+  [err verbose? pred]
+  (letfn [(should-err []
+            (first
+             (simple/sample
+              [true false]
+              :weigh {true err,
+                      false (- 1 err)})))]
+    (fn [& args]
+      (let [b (apply pred args)]
+        (if (should-err)
+          (do
+            (when verbose? (println "*** ERROR ***"))
+            (not b))
+          b)))))
 
 (defn- inject-counter
   [ctr f]
@@ -38,16 +55,22 @@
   If the `verbose?` flag is set to `true` (it defaults to `false`), also
   prints the query questions and responses as they are made.
 
+  The `error` parameter controls how often the test rig makes a mistake in
+  answering a query, by default it has value `0.0` i.e. It makes no errors.
+
   Takes the `learn`-ing algorithm, the membership predicate `member*`,
   the counter-example predicate `counter*`, a `corpus` of positive
   examples, and a count of samples `n`."
 
-  ([learn member* counter* n corpus]
-   (sample-test-rig learn member* counter* n corpus false))
+  ([learn member* counter* n corpus
+    & {:keys [verbose? error]
+       :or   {verbose? false
+              error 0.0}}]
 
-  ([learn member* counter* n corpus verbose?]
    (let [counter-calls (atom 0)
          member-calls  (atom 0)
+
+         member* (inject-error error verbose? member*)
 
          result
          (learn
@@ -66,7 +89,9 @@
       :counter-calls @counter-calls})))
 
 (defn k-bounded-rig
-  [g corpus & {:keys [verbose? samples]}]
+  [g corpus & {:keys [verbose? error samples]
+               :or   {verbose? false
+                      error    0.0}}]
   (let [member*
         (fn [nt yield]
           (boolean
@@ -76,15 +101,19 @@
     (sample-test-rig
      #(kb/learn %1 %2 nts)
      member* kb/sample-counter
-     samples corpus verbose?)))
+     samples corpus
+     :verbose? verbose?
+     :error    error)))
 
 (defn klr-k-bounded-rig
   [g ts corpus
    & {:keys [entropy prune-p
              lr-rate sc-rate
              verbose? samples
-             kernel]
-      :or {kernel cnf-rk}}]
+             error kernel]
+      :or {kernel   cnf-rk
+           verbose? false
+           error    0.0}}]
   (let [member*
         (fn [nt yield]
           (boolean
@@ -100,7 +129,9 @@
      member*
      (partial klr-kb/sample-counter
               sc-rate)
-     samples corpus verbose?)))
+     samples corpus
+     :verbose? verbose?
+     :error    error)))
 
 (comment
   ;; Balanced Parens
