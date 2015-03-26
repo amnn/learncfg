@@ -83,9 +83,9 @@
   (let [init-g (init-grammar nts)]
     (loop [g init-g, blacklist #{}
            member? (memoize member*)]
-      (let [pg (prune g)]
+      (let [pg (prune-cfg g)]
         (if-let [c (counter* pg)]
-          (if-let [t (parse-tree g c)]
+          (if-let [t (parse-trees g c)]
             (let [bad-rules  (diagnose member? t)
                   bad-leaves (filter cnf-leaf? bad-rules)]
               (recur (reduce remove-rule g bad-rules)
@@ -93,7 +93,7 @@
 
             (let [new-g (->> (candidate nts blacklist c)
                              (reduce add-rule g))]
-              (if (parse-tree new-g c)
+              (if (parse-trees new-g c)
                 (recur new-g blacklist member?)
                 (recur init-g #{} (memoize member*))))) ;; RESET
           pg)))))
