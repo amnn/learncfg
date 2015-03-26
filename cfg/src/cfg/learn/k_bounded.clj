@@ -4,6 +4,7 @@
             [bigml.sampling.stream :as stream]
             [cfg.coll-util :refer [queue]]
             [cfg.learn.util :refer :all]
+            [cfg.soft-memo :refer [soft-memoize dampen]]
             [cfg.prune :refer [prune-cfg]]
             [cfg.lang :refer [parse-trees lang-seq in-lang]]
             [cfg.scfg :refer [cfg->scfg make-strongly-consistent sample]]
@@ -57,6 +58,13 @@
         :when (not (blacklist leaf))]
     leaf))
 
+(defn- all-candidates
+  "Like `candidate` but without a blacklist, and producing branch rules also"
+  [nts toks]
+  (concat
+   (for [t toks, nt nts] [nt t])
+   (for [a nts, b nts, c nts] [a b c])))
+
 (defn- init-grammar
   "Given a sequence of non-terminals `nts`, create the CNF grammar containing
   all possible branches of those non-terminals (without any leaf nodes)."
@@ -93,6 +101,21 @@
             (let [new-rules (candidate nts blacklist c)]
               (recur (reduce add-rule g new-rules)
                      blacklist)))
+          pg)))))
+
+(defn soft-learn
+  "Same as `learn` but with extra parameters, `dampen` and `boost` to control
+  the soft memoization of `member*`."
+  [member* counter* damp-factor boost nts ts]
+  (let [[memo member] (soft-memoize boost member*)]
+    (loop         [g  (reduce add-rule (cfg)
+                              (all-candidates nts ts))]
+      (let        [pg (prune-cfg g)]
+        (if-let   [c  (counter* pg)]
+          (if-let [t  (parse-trees g c)]
+            (recur (reduce remove-rule g (diagnose member t)))
+            (do (dampen damp-factor memo)
+                (recur (reduce add-rule g (all-candidates nts c)))))
           pg)))))
 
 (defn interactive-counter
@@ -163,3 +186,10 @@
   (learn interactive-member
          (sample-counter n corpus)
          nts))
+
+(defn soft-sample-learn
+  "Like `sample-learn` but using the soft variant of the learning algorithm."
+  [n corpus damp-factor boost nts ts]
+  (soft-learn interactive-member
+              (sample-counter n corpus)
+              damp-factor boost nts ts))
