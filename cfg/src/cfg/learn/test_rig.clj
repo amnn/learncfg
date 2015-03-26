@@ -104,6 +104,26 @@
      :verbose? verbose?
      :error    error)))
 
+(defn soft-k-bounded-rig
+  [g ts corpus & {:keys [verbose? error
+                         damp-factor boost samples]
+                  :or   {verbose? false
+                         error    0.0}}]
+  (let [member*
+        (fn [nt yield]
+          (boolean
+           (parse-trees g nt yield)))
+
+        nts (keys g)]
+    (sample-test-rig
+     #(kb/soft-learn %1 %2
+                     damp-factor
+                     boost nts ts)
+     member* kb/sample-counter
+     samples corpus
+     :verbose? verbose?
+     :error    error)))
+
 (defn klr-k-bounded-rig
   [g ts corpus
    & {:keys [entropy prune-p
@@ -145,6 +165,23 @@
      [< < > > < >] [< < > < > >]]
    :verbose? true
    :samples 30)
+
+  (soft-k-bounded-rig
+   (cfg
+    (:S => :L :R | :S :S)
+    (:L => < | :L :S | :S :L)
+    (:R => > | :R :S | :S :R))
+
+   '[< >]
+
+   '[[< >] [< > < >] [< < > >]
+     [< < < > > >] [< > < < > >]
+     [< < > > < >] [< < > < > >]]
+   :verbose?    true
+   :damp-factor 0.5
+   :boost       0.5
+   :error       0.05
+   :samples     30)
 
   (klr-k-bounded-rig
    (cfg
