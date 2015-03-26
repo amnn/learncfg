@@ -70,11 +70,10 @@
    (let [counter-calls (atom 0)
          member-calls  (atom 0)
 
-         member* (inject-error error verbose? member*)
-
          result
          (learn
           (cond->> member*
+            :always  (inject-error error verbose?)
             :always  (inject-counter member-calls)
             verbose? (inject-printer member-print))
 
