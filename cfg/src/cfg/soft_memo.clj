@@ -41,7 +41,6 @@
   {:pre [(< 0 boost) (<= boost 1)]}
   (let [mem (atom (mk-map))]
     (letfn [(set-cache [args c val]
-              (println "SET CACHE: " args " " c " " val)
               (swap! mem assoc-in
                      [:vals args]
                      [c val])
