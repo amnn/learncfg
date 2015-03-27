@@ -19,14 +19,16 @@
   non-terminals in `nts`, terminals `ts` and rules governed by the responses
   from queries to `counter*` and `member*`."
   [member* counter* nts ts]
-  (let [member* (memoize member*)]
-    (loop [g (init-grammar nts ts)]
-      (let [pg (prune-cfg g)]
-        (if-let [c (counter* pg)]
-          (if-let [t (parse-trees g c)]
-            (recur (reduce remove-rule g (diagnose member* t)))
-            (recur (reduce add-rule    g (candidates nts c))))
-          pg)))))
+  (loop [g (init-grammar nts ts)
+         member? (memoize member*)]
+    (let [pg (prune-cfg g)]
+      (if-let [c (counter* pg)]
+        (if-let [t (parse-trees g c)]
+          (recur (reduce remove-rule g (diagnose member? t))
+                 member?)
+          (recur (reduce add-rule    g (candidates nts c))
+                 (memoize member*)))
+        pg))))
 
 (defn sample-learn
   "A variant of `interactive-learn` in which the user is presented with
