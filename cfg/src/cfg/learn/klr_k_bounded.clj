@@ -7,7 +7,7 @@
             [cfg.lang :refer [ml-tree ml-p]]
             [cfg.prune :refer [prune-scfg]]
             [cfg.logistic-regression :refer [mk-classifier learn sigmoid logit]]
-            [cfg.learn.k-bounded :refer [interactive-member present-samples]]
+            [cfg.learn.util :refer [interactive-member present-samples]]
             [clojure.set :refer [intersection]]
             [clojure.pprint]))
 

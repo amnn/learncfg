@@ -1,6 +1,8 @@
 (ns cfg.learn.test-rig
   (:require [bigml.sampling.simple :as simple]
+            [cfg.learn.util :refer [sample-counter]]
             [cfg.learn.k-bounded :as kb]
+            [cfg.learn.soft-k-bounded :as skb]
             [cfg.learn.klr-k-bounded :refer [klr-learn cnf-rk id-k] :as klr-kb]
             [cfg.lang :refer [parse-trees]]))
 
@@ -99,7 +101,7 @@
         nts (keys g)]
     (sample-test-rig
      #(kb/learn %1 %2 nts)
-     member* kb/sample-counter
+     member* sample-counter
      samples corpus
      :verbose? verbose?
      :error    error)))
@@ -116,10 +118,10 @@
 
         nts (keys g)]
     (sample-test-rig
-     #(kb/soft-learn %1 %2
-                     damp-factor
-                     boost nts ts)
-     member* kb/sample-counter
+     #(skb/learn %1 %2
+                 damp-factor
+                 boost nts ts)
+     member* sample-counter
      samples corpus
      :verbose? verbose?
      :error    error)))
