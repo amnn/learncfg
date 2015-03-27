@@ -90,9 +90,9 @@
       :counter-calls @counter-calls})))
 
 (defn k-bounded-rig
-  [g corpus & {:keys [verbose? error samples]
-               :or   {verbose? false
-                      error    0.0}}]
+  [g ts corpus & {:keys [verbose? error samples]
+                  :or   {verbose? false
+                         error    0.0}}]
   (let [member*
         (fn [nt yield]
           (boolean
@@ -100,7 +100,7 @@
 
         nts (keys g)]
     (sample-test-rig
-     #(kb/learn %1 %2 nts)
+     #(kb/learn %1 %2 nts ts)
      member* sample-counter
      samples corpus
      :verbose? verbose?
@@ -158,9 +158,12 @@
   ;; Balanced Parens
   (k-bounded-rig
    (cfg
+    (:S => :L :R)
     (:S => :L :R | :S :S)
     (:L => < | :L :S | :S :L)
     (:R => > | :R :S | :S :R))
+
+   '[< >]
 
    '[[< >] [< > < >] [< < > >]
      [< < < > > >] [< > < < > >]
@@ -204,10 +207,8 @@
 
   ;; (AB)+
   (k-bounded-rig
-   (cfg
-    (:S  => :S :S | :A :B)
-    (:A  => A)
-    (:B  => B))
+   (cfg (:S  => :S :S | A B))
+   '[A B]
    '[[A B] [A B A B]
      [A B A B A B]
      [A B A B A B A B]]
@@ -234,9 +235,9 @@
   ;; A^nB^n
   (k-bounded-rig
    (cfg
-    (:S  => :A :S*)
-    (:S* => B | :S :B)
-    (:A => A) (:B => B))
+    (:S  => A :S*)
+    (:S* => B | :S B))
+   '[A B]
    '[[A B] [A A B B]
      [A A A B B B]
      [A A A A B B B B]]
@@ -263,9 +264,9 @@
   ;; A^nB^mC^(n+m)
   (k-bounded-rig
    (cfg
-    (:S  => :A :S+ | :B :S+)
-    (:S+ => :S :C | C)
-    (:A  => A) (:B => B) (:C => C))
+    (:S => A :S+ | B :S+)
+    (:S+ => :S C | C))
+   '[A B C]
    '[[A C] [B C]
      [A A C C] [A B C C] [B B C C]
      [A A A C C C] [A A B C C C]
@@ -292,13 +293,10 @@
    :samples  30)
 
   ;; Mathematical Expressions
-  (klr-k-bounded-rig
+  (k-bounded-rig
    (cfg
-    (:S  => :V :S1 | :L :S2)
-    (:S1 => :OP :S) (:S2 => :S :R)
-    (:OP => + | *)
-    (:L  => <) (:R  => >)
-    (:V  => VAR | NUM))
+    (:S => VAR | NUM | VAR :S1 | NUM :S1 | < :S2)
+    (:S1 => + :S | * :S) (:S2 => :S >))
 
    '[+ * < > NUM VAR]
 
@@ -310,9 +308,4 @@
      [NUM + NUM + NUM] [VAR + VAR + VAR]
      [NUM * VAR + NUM] [NUM * < VAR + NUM >]]
    :verbose? true
-   :kernel   id-k
-   :entropy  0.5
-   :lr-rate  0.5
-   :prune-p  0.49
-   :sc-rate  2
    :samples  30))

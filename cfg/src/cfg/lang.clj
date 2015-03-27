@@ -231,6 +231,9 @@
          (map first))))
 
 (defrecord ^:private Terminal [t])
+(defn terminal-node?
+  "Predicate to detect whether the node is from a terminal."
+  [t] (instance? Terminal t))
 
 (defn- parse-tree*
   "Generalisation of the CYK algorithm, for calculating the parse trees of

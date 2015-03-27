@@ -4,25 +4,6 @@
             [cfg.lang  :refer [parse-trees]]
             [cfg.cfg   :refer [cfg add-rule remove-rule cnf-leaf?]]))
 
-(defn- candidate
-  "Given a multimap of non-terminals to terminals they cannot yield (the
-  `blacklist`), a sequence of non-terminals, `nts` and a vector of tokens,
-  `toks`, give a collection of rules that, when added to the grammar associated
-  with `blacklist` and `nts`, will allow it to recognise `toks`."
-  [nts blacklist toks]
-  (for [t toks, nt nts,
-        :let  [leaf [nt t]]
-        :when (not (blacklist leaf))]
-    leaf))
-
-(defn- init-grammar
-  "Given a sequence of non-terminals `nts`, create the CNF grammar containing
-  all possible branches of those non-terminals (without any leaf nodes)."
-  [nts]
-  (reduce add-rule (cfg)
-          (for [a nts b nts c nts]
-            [a b c])))
-
 (defn learn
   "Takes two functions:
 
@@ -34,30 +15,24 @@
      whether it is possible to yield the tokens from the non-terminal in
      the target grammar.
 
-  As well as a list of non-terminals `nts`, and attempts to learn a grammar
-  with non-terminals in `nts` and rules governed by the responses from queries
-  to `counter*` and `member*`."
-  [member* counter* nts]
+  As well as a list of non-terminals `nts`, and attempts to learn a grammar with
+  non-terminals in `nts`, terminals `ts` and rules governed by the responses
+  from queries to `counter*` and `member*`."
+  [member* counter* nts ts]
   (let [member* (memoize member*)]
-    (loop [g (init-grammar nts), blacklist #{}]
+    (loop [g (init-grammar nts ts)]
       (let [pg (prune-cfg g)]
         (if-let [c (counter* pg)]
           (if-let [t (parse-trees g c)]
-            (let [bad-rules  (diagnose member* t)
-                  bad-leaves (filter cnf-leaf? bad-rules)]
-              (recur (reduce remove-rule g bad-rules)
-                     (into blacklist bad-leaves)))
-
-            (let [new-rules (candidate nts blacklist c)]
-              (recur (reduce add-rule g new-rules)
-                     blacklist)))
+            (recur (reduce remove-rule g (diagnose member* t)))
+            (recur (reduce add-rule    g (candidates nts c))))
           pg)))))
 
 (defn sample-learn
   "A variant of `interactive-learn` in which the user is presented with
   samples, rather than the grammar, when asked to produce counter-examples.
   Additionally, false-negatives are removed using a corpus of positive data."
-  [n corpus nts]
+  [n corpus nts ts]
   (learn interactive-member
          (sample-counter n corpus)
-         nts))
+         nts ts))

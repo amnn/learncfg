@@ -5,19 +5,6 @@
             [cfg.lang :refer [parse-trees]]
             [cfg.prune :refer [prune-cfg]]))
 
-(defn- candidates
-  "Produce candidate rules"
-  [nts toks]
-  (concat
-   (for [t toks, nt nts] [nt t])
-   (for [a nts, b nts, c nts] [a b c])))
-
-(defn- init-grammar
-  "Generate the initial grammar for the learning routine."
-  [nts ts]
-  (reduce add-rule (cfg)
-          (candidates nts ts)))
-
 (defn learn
   "Same as `k-bounded/learn` but with extra parameters, `dampen` and `boost` to
   control the soft memoization of `member*`."
