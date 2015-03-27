@@ -14,13 +14,13 @@
          * factor))
 
 (defn- pick
-  "Sample a key from `weights` distributed according to the values."
-  [weights] (first (simple/sample (keys weights) :weigh weights)))
+  "Sample a key from `weights` distributed according to its values."
+  [& {:as weights}] (first (simple/sample (keys weights) :weigh weights)))
 
 (defn- choose
   "Decide whether to fetch from or refresh the cache, according to confidence
   `c`."
-  [c] (pick {::fetch c, ::refresh (- 1 c)}))
+  [c] (pick ::fetch c, ::refresh (- 1 c)))
 
 (defn- mix
   "Linearly interpolate between `x` and `y`, with ratio `r`."

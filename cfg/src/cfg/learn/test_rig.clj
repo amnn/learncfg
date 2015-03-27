@@ -180,7 +180,7 @@
    :verbose?    true
    :damp-factor 0.5
    :boost       0.5
-   :error       0.05
+   :error       0.1
    :samples     30)
 
   (klr-k-bounded-rig
