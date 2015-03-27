@@ -3,7 +3,6 @@
             [cfg.learn.util :refer [sample-counter]]
             [cfg.learn.k-bounded :as kb]
             [cfg.learn.soft-k-bounded :as skb]
-            [cfg.learn.klr-k-bounded :refer [klr-learn cnf-rk id-k] :as klr-kb]
             [cfg.lang :refer [parse-trees]]))
 
 (defn- inject-error
@@ -126,36 +125,8 @@
      :verbose? verbose?
      :error    error)))
 
-(defn klr-k-bounded-rig
-  [g ts corpus
-   & {:keys [entropy prune-p
-             lr-rate sc-rate
-             verbose? samples
-             error kernel]
-      :or {kernel   cnf-rk
-           verbose? false
-           error    0.0}}]
-  (let [member*
-        (fn [nt yield]
-          (boolean
-           (parse-trees g nt yield)))
-
-        nts (keys g)]
-    (sample-test-rig
-     #(klr-learn kernel
-                 %1 %2 nts ts
-                 :entropy entropy
-                 :prune-p prune-p
-                 :lr-rate lr-rate)
-     member*
-     (partial klr-kb/sample-counter
-              sc-rate)
-     samples corpus
-     :verbose? verbose?
-     :error    error)))
-
 (comment
-  ;; Balanced Parens
+  ;; Balanced Parens 1
   (k-bounded-rig
    (cfg
     (:S => :L :R)
@@ -185,27 +156,70 @@
    :verbose?    true
    :damp-factor 0.5
    :boost       0.5
-   :error       0.1
+   :error       0.05
    :samples     30)
 
-  (klr-k-bounded-rig
+  ;; Balanced Parens loose
+  (k-bounded-rig
    (cfg
-    (:S => :L :R | :S :S)
-    (:L => < | :L :S | :S :L)
-    (:R => > | :R :S | :S :R))
+    (:S  => < :S1 | :S :S)
+    (:S1 => :S > | >))
+
    '[< >]
+
    '[[< >] [< > < >] [< < > >]
      [< < < > > >] [< > < < > >]
      [< < > > < >] [< < > < > >]]
    :verbose? true
-   :kernel   id-k
-   :entropy  0.5
-   :lr-rate  0.5
-   :prune-p  0.4
-   :sc-rate  2
-   :samples  30)
+   :samples 30)
+
+  (soft-k-bounded-rig
+   (cfg
+    (:S  => < :S1 | :S :S)
+    (:S1 => :S > | >))
+
+   '[< >]
+
+   '[[< >] [< > < >] [< < > >]
+     [< < < > > >] [< > < < > >]
+     [< < > > < >] [< < > < > >]]
+   :verbose?    true
+   :damp-factor 0.5
+   :boost       0.5
+   :error       0.05
+   :samples     30)
 
   ;; (AB)+
+  (k-bounded-rig
+   (cfg (:S  => :AB :S)
+        (:AB => :A :B)
+        (:A  => A)
+        (:B  => B))
+   '[A B]
+   '[[A B] [A B A B]
+     [A B A B A B]
+     [A B A B A B A B]]
+   :verbose? true
+   :samples  30)
+
+  (soft-k-bounded-rig
+   (cfg (:S  => :AB :S)
+        (:AB => :A :B)
+        (:A  => A)
+        (:B  => B))
+
+   '[A B]
+
+   '[[A B] [A B A B]
+     [A B A B A B]
+     [A B A B A B A B]]
+   :verbose?    true
+   :damp-factor 0.5
+   :boost       0.5
+   :error       0.05
+   :samples     30)
+
+  ;; (AB)+ loose
   (k-bounded-rig
    (cfg (:S  => :S :S | A B))
    '[A B]
@@ -215,58 +229,96 @@
    :verbose? true
    :samples  30)
 
-  (klr-k-bounded-rig
-   (cfg
-    (:S  => :S :S | :A :B)
-    (:A  => A)
-    (:B  => B))
+  (soft-k-bounded-rig
+   (cfg (:S => :S :S | A B))
+
    '[A B]
+
    '[[A B] [A B A B]
      [A B A B A B]
      [A B A B A B A B]]
-   :verbose? true
-   :kernel   id-k
-   :entropy  0.5
-   :lr-rate  0.5
-   :prune-p  0.4
-   :sc-rate  2
-   :samples  30)
+   :verbose?    true
+   :damp-factor 0.5
+   :boost       0.5
+   :error       0.05
+   :samples     30)
+
 
   ;; A^nB^n
   (k-bounded-rig
    (cfg
-    (:S  => A :S*)
-    (:S* => B | :S B))
+    (:S  => :A :S*)
+    (:S* => :B | :S :B)
+    (:A  => A)
+    (:B  => B))
+
    '[A B]
+
    '[[A B] [A A B B]
      [A A A B B B]
      [A A A A B B B B]]
    :verbose? true
    :samples 30)
 
-  (klr-k-bounded-rig
+  (k-bounded-rig
    (cfg
     (:S  => :A :S*)
-    (:S* => B | :S :B)
-    (:A => A) (:B => B))
+    (:S* => :B | :S :B)
+    (:A  => A)
+    (:B  => B))
+
    '[A B]
+
+   '[[A B] [A A B B]
+     [A A A B B B]
+     [A A A A B B B B]]
+   :verbose?    true
+   :damp-factor 0.5
+   :boost       0.5
+   :error       0.05
+   :samples     30)
+
+  ;; A^nB^n loose
+  (k-bounded-rig
+   (cfg
+    (:S  => A :S*)
+    (:S* => B | :S B))
+
+   '[A B]
+
    '[[A B] [A A B B]
      [A A A B B B]
      [A A A A B B B B]]
    :verbose? true
-   :kernel   id-k
-   :entropy  0.5
-   :lr-rate  0.5
-   :prune-p  0.4
-   :sc-rate  2
-   :samples  30)
+   :samples 30)
+
+  (k-bounded-rig
+   (cfg
+    (:S  => A :S*)
+    (:S* => B | :S B))
+
+   '[A B]
+
+   '[[A B] [A A B B]
+     [A A A B B B]
+     [A A A A B B B B]]
+   :verbose?    true
+   :damp-factor 0.5
+   :boost       0.5
+   :error       0.05
+   :samples     30)
 
   ;; A^nB^mC^(n+m)
   (k-bounded-rig
    (cfg
-    (:S => A :S+ | B :S+)
-    (:S+ => :S C | C))
+    (:S  => :A :S+ | :B :S+)
+    (:S+ => :S :C | :C)
+    (:A  => A)
+    (:B  => B)
+    (:C  => C))
+
    '[A B C]
+
    '[[A C] [B C]
      [A A C C] [A B C C] [B B C C]
      [A A A C C C] [A A B C C C]
@@ -274,25 +326,59 @@
    :verbose? true
    :samples  30)
 
-  (klr-k-bounded-rig
+  (k-bounded-rig
    (cfg
     (:S  => :A :S+ | :B :S+)
-    (:S+ => :S :C | C)
-    (:A  => A) (:B => B) (:C => C))
+    (:S+ => :S :C | :C)
+    (:A  => A)
+    (:B  => B)
+    (:C  => C))
+
    '[A B C]
+
+   '[[A C] [B C]
+     [A A C C] [A B C C] [B B C C]
+     [A A A C C C] [A A B C C C]
+     [A B B C C C] [B B B C C C]]
+   :verbose?    true
+   :damp-factor 0.5
+   :boost       0.5
+   :error       0.01
+   :samples     30)
+
+  ;; A^nB^mC^(n+m) loose
+  (k-bounded-rig
+   (cfg
+    (:S => A :S+ | B :S+)
+    (:S+ => :S C | C))
+
+   '[A B C]
+
    '[[A C] [B C]
      [A A C C] [A B C C] [B B C C]
      [A A A C C C] [A A B C C C]
      [A B B C C C] [B B B C C C]]
    :verbose? true
-   :kernel   id-k
-   :entropy  0.5
-   :lr-rate  0.5
-   :prune-p  0.4
-   :sc-rate  2
    :samples  30)
 
-  ;; Mathematical Expressions
+  (k-bounded-rig
+   (cfg
+    (:S => A :S+ | B :S+)
+    (:S+ => :S C | C))
+
+   '[A B C]
+
+   '[[A C] [B C]
+     [A A C C] [A B C C] [B B C C]
+     [A A A C C C] [A A B C C C]
+     [A B B C C C] [B B B C C C]]
+   :verbose?    true
+   :damp-factor 0.5
+   :boost       0.5
+   :error       0.01
+   :samples     30)
+
+  ;; Mathematical Expressions (loose only)
   (k-bounded-rig
    (cfg
     (:S => VAR | NUM | VAR :S1 | NUM :S1 | < :S2)
@@ -308,4 +394,24 @@
      [NUM + NUM + NUM] [VAR + VAR + VAR]
      [NUM * VAR + NUM] [NUM * < VAR + NUM >]]
    :verbose? true
-   :samples  30))
+   :samples  30)
+
+  (soft-k-bounded-rig
+   (cfg
+    (:S => VAR | NUM | VAR :S1 | NUM :S1 | < :S2)
+    (:S1 => + :S | * :S) (:S2 => :S >))
+
+   '[+ * < > NUM VAR]
+
+   '[[NUM] [VAR]
+     [< NUM >] [< VAR >]
+     [NUM + VAR] [VAR + NUM] [NUM + NUM] [VAR + VAR]
+     [NUM * VAR] [VAR * NUM] [NUM * NUM] [VAR * VAR]
+     [< NUM + VAR >]
+     [NUM + NUM + NUM] [VAR + VAR + VAR]
+     [NUM * VAR + NUM] [NUM * < VAR + NUM >]]
+   :verbose? true
+   :damp-factor 0.5
+   :boost       0.5
+   :error       0.01
+   :samples     30))
