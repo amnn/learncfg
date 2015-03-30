@@ -88,10 +88,10 @@
       :member-calls  @member-calls
       :counter-calls @counter-calls})))
 
-(defn k-bounded-rig
-  [g ts corpus & {:keys [verbose? error samples]
-                  :or   {verbose? false
-                         error    0.0}}]
+(defn grammar-rig
+  [learn g ts corpus {:keys [verbose? error samples]
+                      :or   {verbose? false
+                             error    0.0}}]
   (let [member*
         (fn [nt yield]
           (boolean
@@ -99,31 +99,19 @@
 
         nts (keys g)]
     (sample-test-rig
-     #(kb/learn %1 %2 nts ts)
+     #(learn %1 %2 nts ts)
      member* sample-counter
      samples corpus
      :verbose? verbose?
      :error    error)))
+
+(defn k-bounded-rig
+  [g ts corpus & {:as params}]
+  (grammar-rig kb/learn g ts corpus params))
 
 (defn soft-k-bounded-rig
-  [g ts corpus & {:keys [verbose? error
-                         damp-factor boost samples]
-                  :or   {verbose? false
-                         error    0.0}}]
-  (let [member*
-        (fn [nt yield]
-          (boolean
-           (parse-trees g nt yield)))
-
-        nts (keys g)]
-    (sample-test-rig
-     #(skb/learn %1 %2
-                 damp-factor
-                 boost nts ts)
-     member* sample-counter
-     samples corpus
-     :verbose? verbose?
-     :error    error)))
+  [g ts corpus & {:as params}]
+  (grammar-rig skb/learn g ts corpus params))
 
 (comment
   ;; Balanced Parens 1
