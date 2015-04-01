@@ -42,21 +42,24 @@
   "Given a non-terminal membership predicate `member*`, and a parse-tree `t`,
   return a bad production used in the parse-tree."
   [member* t]
-  (letfn [(consume-child [state [rule & children]]
-            (if-let [bad-child (some (fn [{cnt :nt cy :yield :as child}]
-                                       (when-not (member* cnt cy) child))
-                                     (remove terminal-node? children))]
-              (update-in state [0] conj  bad-child)
-              (update-in state [1] conj! rule)))]
-    (loop [q         (queue t)
-           bad-rules (transient #{})]
-      (if (seq q)
-        (let [{:keys [children]} (peek q)
-              [q* bad-rules*] (reduce consume-child
-                                      [(pop q) bad-rules]
-                                      children)]
-          (recur q* bad-rules*))
-        (persistent! bad-rules)))))
+  (letfn [(consume-child [yield state [rule & children]]
+            (if ((:visited? state) [rule yield])
+              state
+              (let [state (update-in state [:visited?] conj! [rule yield])]
+                (if-let [bad-child
+                         (some (fn [{cnt :nt cy :yield :as child}]
+                                 (when-not (member* cnt cy) child))
+                               (remove terminal-node? children))]
+                  (update-in state [:q] conj bad-child)
+                  (update-in state [:bad-rules] conj! rule)))))]
+    (loop [state {:q         (queue t)
+                  :bad-rules (transient #{})
+                  :visited?  (transient #{})}]
+      (if-let [{:keys [children yield]} (-> state :q peek)]
+        (recur (reduce (partial consume-child yield)
+                       (update-in state [:q] pop)
+                       children))
+        (-> state :bad-rules persistent!)))))
 
 (defn present-samples
   "Print the given vector of `samples` and ask the user to pick one."

@@ -1,5 +1,6 @@
 (ns cfg.learn.test-rig
-  (:require [bigml.sampling.simple :as simple]
+  (:require [clojure.pprint :refer [pprint]]
+            [bigml.sampling.simple :as simple]
             [cfg.learn.util :refer [sample-counter]]
             [cfg.learn.k-bounded :as kb]
             [cfg.learn.soft-k-bounded :as skb]
@@ -43,7 +44,7 @@
 (defn- counter-print
   [[g] ans]
   (println "counter*")
-  (clojure.pprint/pprint g)
+  (pprint g)
   (println
    (if ans
      (str "\t=> " ans)
@@ -114,6 +115,9 @@
   (grammar-rig skb/learn g ts corpus params))
 
 (comment
+  (require '[cfg.cfg :refer :all]
+           '[cfg.learn.test-rig :refer :all]
+           :reload-all)
   ;; Balanced Parens 1
   (k-bounded-rig
    (cfg
@@ -128,7 +132,8 @@
      [< < < > > >] [< > < < > >]
      [< < > > < >] [< < > < > >]]
    :verbose? true
-   :samples 30)
+   :error    0.2
+   :samples  30)
 
   (soft-k-bounded-rig
    (cfg
@@ -142,9 +147,7 @@
      [< < < > > >] [< > < < > >]
      [< < > > < >] [< < > < > >]]
    :verbose?    true
-   :damp-factor 0.5
-   :boost       0.5
-   :error       0.05
+   :error       0.2
    :samples     30)
 
   ;; Balanced Parens loose
@@ -159,6 +162,7 @@
      [< < < > > >] [< > < < > >]
      [< < > > < >] [< < > < > >]]
    :verbose? true
+   :error   0.2
    :samples 30)
 
   (soft-k-bounded-rig
@@ -172,9 +176,7 @@
      [< < < > > >] [< > < < > >]
      [< < > > < >] [< < > < > >]]
    :verbose?    true
-   :damp-factor 0.5
-   :boost       0.5
-   :error       0.05
+   :error       0.2
    :samples     30)
 
   ;; (AB)+
@@ -202,8 +204,6 @@
      [A B A B A B]
      [A B A B A B A B]]
    :verbose?    true
-   :damp-factor 0.5
-   :boost       0.5
    :error       0.05
    :samples     30)
 
@@ -226,8 +226,6 @@
      [A B A B A B]
      [A B A B A B A B]]
    :verbose?    true
-   :damp-factor 0.5
-   :boost       0.5
    :error       0.05
    :samples     30)
 
@@ -261,8 +259,6 @@
      [A A A B B B]
      [A A A A B B B B]]
    :verbose?    true
-   :damp-factor 0.5
-   :boost       0.5
    :error       0.05
    :samples     30)
 
@@ -291,8 +287,6 @@
      [A A A B B B]
      [A A A A B B B B]]
    :verbose?    true
-   :damp-factor 0.5
-   :boost       0.5
    :error       0.05
    :samples     30)
 
@@ -329,8 +323,6 @@
      [A A A C C C] [A A B C C C]
      [A B B C C C] [B B B C C C]]
    :verbose?    true
-   :damp-factor 0.5
-   :boost       0.5
    :error       0.01
    :samples     30)
 
@@ -361,8 +353,6 @@
      [A A A C C C] [A A B C C C]
      [A B B C C C] [B B B C C C]]
    :verbose?    true
-   :damp-factor 0.5
-   :boost       0.5
    :error       0.01
    :samples     30)
 
@@ -399,7 +389,5 @@
      [NUM + NUM + NUM] [VAR + VAR + VAR]
      [NUM * VAR + NUM] [NUM * < VAR + NUM >]]
    :verbose? true
-   :damp-factor 0.5
-   :boost       0.5
    :error       0.01
    :samples     30))

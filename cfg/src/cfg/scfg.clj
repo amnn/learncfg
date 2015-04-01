@@ -54,23 +54,18 @@
 
 (defn sample
   "Given an SCFG `sg`, returns a string generated according to its
-  distribution. Rooted at a sequence `deriv`, which defaults to `[:S]`."
-  ([sg] (sample sg [:S]))
+  distribution. Rooted at a non-terminal `nt`, which defaults to `:S`."
+  ([sg] (sample sg :S))
 
-  ([sg deriv]
-   (if (every? terminal? deriv)
-     deriv
-     (letfn [(pick-rule [nt]
-               (let [rules (get sg nt {})]
-                 (first
-                   (simple/sample (keys rules)
-                                  :weigh rules))))]
-       (->> deriv
-            (map #(cond-> %
-                    (non-terminal? %)
-                    pick-rule))
-            flatten vec
-            (recur sg))))))
+  ([sg nt]
+   (let [rules (get sg nt {})
+         rule (first (simple/sample (keys rules)
+                                    :weigh rules))]
+     (->> rule
+          (map #(cond->> %
+                  (non-terminal? %)
+                  (sample sg)))
+          flatten vec))))
 
 (defn e-graph
   "A sparse adjacency list for the directed graph representation of the
