@@ -21,7 +21,7 @@
 
 (defn soft-sample-learn
   "Like `sample-learn` but using the soft variant of the learning algorithm."
-  [n corpus damp-factor boost nts ts]
+  [n corpus nts ts]
   (learn interactive-member
          (sample-counter n corpus)
-         damp-factor boost nts ts))
+         nts ts))
