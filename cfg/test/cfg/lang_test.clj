@@ -111,6 +111,34 @@
     (is (= '[[A] [B C] [D E F]]
            (lang-seq (cfg (:S => A | B C | D E F)))))))
 
+(deftest yields?-test
+  (testing "loosened CNF form"
+    (let [g (cfg (:S => A :S | A))]
+      (is (not (yields? g '[B])))
+      (is (yields? g '[A]))
+      (is (yields? g '[A A]))))
+
+  (testing "left recursion"
+    (let [g (cfg (:S => :A :S | A)
+                 (:A => A))]
+      (is (not (yields? g '[B])))
+      (is (yields? g '[A]))
+      (is (yields? g '[A A]))))
+
+  (testing "right recursion"
+    (let [g (cfg (:S => :S :A | A)
+                 (:A => A))]
+      (is (not (yields? g '[B])))
+      (is (yields? g '[A]))
+      (is (yields? g '[A A]))))
+
+  (testing "ambiguous grammar"
+    (let [g (cfg (:S => :S :S | A))]
+      (is (not (yields? g '[B])))
+      (is (yields? g '[A]))
+      (is (yields? g '[A A]))
+      (is (yields? g '[A A A])))))
+
 (deftest parse-trees-test
   (testing "loosened CNF form"
     (let [g (cfg (:S => A :S | A))]

@@ -4,7 +4,7 @@
             [cfg.learn.util :refer [sample-counter]]
             [cfg.learn.k-bounded :as kb]
             [cfg.learn.soft-k-bounded :as skb]
-            [cfg.lang :refer [parse-trees]]))
+            [cfg.lang :refer [yields?]]))
 
 (defn- inject-error
   [err verbose? pred]
@@ -96,7 +96,7 @@
   (let [member*
         (fn [nt yield]
           (boolean
-           (parse-trees g nt yield)))
+           (yields? g nt yield)))
 
         nts (keys g)]
     (sample-test-rig

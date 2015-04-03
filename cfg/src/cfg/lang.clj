@@ -305,6 +305,23 @@
                   [i j k b]))
         (get-in [n 0 root]))))
 
+(defn yields?
+  "Given a grammar `g`, a non-terminal `nt` (`:S` by default), and a `yield`,
+  asserts whether `nt =>* yield` in `g`."
+  ([g yield] (yields? g :S yield))
+  ([g nt yield]
+   (let [{branches true leaves false}
+         (group-by branch?
+                   (cfg/rule-seq g))]
+     (parse-tree*
+      :branches branches, :leaves leaves
+      :root nt, :ts yield
+
+      :->branch (constantly true)
+      :->leaf   (constantly true)
+      :merge-fn (constantly true)
+      :rule     identity))))
+
 (defrecord ^:private MultiBranch [nt yield children])
 (defrecord ^:private MultiLeaf   [nt yield children])
 
