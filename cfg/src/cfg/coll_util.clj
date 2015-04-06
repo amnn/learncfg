@@ -13,6 +13,15 @@
   ([a b c d & etc]
    (into (queue a b c d) etc)))
 
+(defn concat! [xs ys]
+  "Concatenates `ys` on the end of a transient *vector*, `xs`."
+  [xs ys]
+  (loop [ret xs, src (seq ys)]
+    (if (seq src)
+      (recur (conj! ret (first src))
+             (rest src))
+      ret)))
+
 (defn map-v
   "Map defined over values in key-value pair collections."
   [f kvps]

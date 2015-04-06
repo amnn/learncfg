@@ -2,7 +2,7 @@
   (:require [clojure.core.matrix :refer [array inverse mmul identity-matrix]]
             [clojure.core.matrix.operators :as m]
             [bigml.sampling.simple :as simple]
-            [cfg.coll-util :refer [map-v map-kv]]
+            [cfg.coll-util :refer [concat! map-v map-kv]]
             [cfg.hop :refer [best-rules]]
             [cfg.graph :refer [transpose children scc]]
             [cfg.cfg :refer [mk-rule terminal? non-terminal?] :as cfg]))
@@ -65,11 +65,12 @@
 
            (recur-left [[nt & rhs]]
              (concat (pick-rule nt) rhs))]
-     (loop [lhs [] rhs (list nt)]
+     (loop [lhs (transient [])
+            rhs (list nt)]
        (if (seq rhs)
          (let [[l r] (split-with terminal? (recur-left rhs))]
-           (recur (concat lhs l) r))
-         (vec lhs))))))
+           (recur (concat! lhs l) r))
+         (persistent! lhs))))))
 
 (defn e-graph
   "A sparse adjacency list for the directed graph representation of the
