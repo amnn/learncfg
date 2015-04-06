@@ -24,7 +24,7 @@
 (defn rule-p
   "Given an SCFG `sg` and a rule return its associated probability, or `nil`
   if it doesn't exist."
-  [sg [lhs & rhs]] (get-in sg [lhs rhs] 0.0))
+  [sg [lhs & rhs]] (get-in sg [lhs (vec rhs)] 0.0))
 
 (defn rule-seq
   "Given an `sg`, returns a sequence of [rule probability] pairs in `sg`.
