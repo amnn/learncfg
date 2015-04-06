@@ -122,7 +122,6 @@
   ;; Balanced Parens 1
   (k-bounded-rig
    (cfg
-    (:S => :L :R)
     (:S => :L :R | :S :S)
     (:L => < | :L :S | :S :L)
     (:R => > | :R :S | :S :R))
@@ -247,7 +246,7 @@
    :verbose? true
    :samples 30)
 
-  (k-bounded-rig
+  (soft-k-bounded-rig
    (cfg
     (:S  => :A :S*)
     (:S* => :B | :S :B)
@@ -277,7 +276,7 @@
    :verbose? true
    :samples 30)
 
-  (k-bounded-rig
+  (soft-k-bounded-rig
    (cfg
     (:S  => A :S*)
     (:S* => B | :S B))
@@ -309,7 +308,7 @@
    :verbose? true
    :samples  30)
 
-  (k-bounded-rig
+  (soft-k-bounded-rig
    (cfg
     (:S  => :A :S+ | :B :S+)
     (:S+ => :S :C | :C)
@@ -342,7 +341,7 @@
    :verbose? true
    :samples  30)
 
-  (k-bounded-rig
+  (soft-k-bounded-rig
    (cfg
     (:S => A :S+ | B :S+)
     (:S+ => :S C | C))
