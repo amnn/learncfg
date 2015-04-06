@@ -8,8 +8,8 @@
 (defn learn
   "Same as `k-bounded/learn` but with extra parameters, `dampen` and `boost` to
   control the soft memoization of `member*`."
-  [member* counter* nts ts]
-  (let [[memo member] (soft-memoize member*)]
+  [dampen member* counter* nts ts]
+  (let [[memo member] (soft-memoize dampen member*)]
     (loop         [g  (init-grammar nts ts)]
       (let        [pg (prune-cfg g)]
         (if-let   [c  (counter* pg)]
@@ -21,7 +21,7 @@
 
 (defn soft-sample-learn
   "Like `sample-learn` but using the soft variant of the learning algorithm."
-  [n corpus nts ts]
-  (learn interactive-member
+  [dampen n corpus nts ts]
+  (learn dampen interactive-member
          (sample-counter n corpus)
          nts ts))

@@ -112,7 +112,8 @@
 
 (defn soft-k-bounded-rig
   [g ts corpus & {:as params}]
-  (grammar-rig skb/learn g ts corpus params))
+  (grammar-rig (partial skb/learn (:dampen params))
+               g ts corpus params))
 
 (comment
   (require '[cfg.cfg :refer :all]
