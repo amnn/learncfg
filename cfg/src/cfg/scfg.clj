@@ -58,14 +58,18 @@
   ([sg] (sample sg :S))
 
   ([sg nt]
-   (let [rules (get sg nt {})
-         rule (first (simple/sample (keys rules)
-                                    :weigh rules))]
-     (->> rule
-          (map #(cond->> %
-                  (non-terminal? %)
-                  (sample sg)))
-          flatten vec))))
+   (letfn [(pick-rule [nt]
+             (let [rules (get sg nt {})]
+               (first (simple/sample (keys rules)
+                                     :weigh rules))))
+
+           (recur-left [[nt & rhs]]
+             (concat (pick-rule nt) rhs))]
+     (loop [lhs [] rhs (list nt)]
+       (if (seq rhs)
+         (let [[l r] (split-with terminal? (recur-left rhs))]
+           (recur (concat lhs l) r))
+         (vec lhs))))))
 
 (defn e-graph
   "A sparse adjacency list for the directed graph representation of the
