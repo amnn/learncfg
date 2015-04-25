@@ -13,7 +13,7 @@
   ([a b c d & etc]
    (into (queue a b c d) etc)))
 
-(defn concat! [xs ys]
+(defn concat!
   "Concatenates `ys` on the end of a transient *vector*, `xs`."
   [xs ys]
   (loop [ret xs, src (seq ys)]
