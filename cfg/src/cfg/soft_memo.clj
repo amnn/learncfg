@@ -1,52 +1,46 @@
 (ns cfg.soft-memo
   (:require [bigml.sampling.simple :as simple]))
 
-(defrecord ^:private CacheRecord [conf val])
-(defn- mk-c-record [val] (->CacheRecord 1.0 val))
+(defrecord ^:private CacheRecord [gen mode modal-freq freqs])
+(defn- mk-c-record [gen val] (->CacheRecord gen val 1 {val 1}))
 
-(defrecord ^:private MemMap [fresh stale safe])
-(defn- mk-map [] (->MemMap {} {} {}))
+(defrecord ^:private MemMap [gen cache])
+(defn- mk-map [] (->MemMap 0 {}))
 
 (defn requery
   "Indicate the need for a requery in `mem` (a *reference* to a memoization map)."
-  [mem]
-  (swap! mem
-         (fn [{:keys [fresh stale safe]}]
-           (->MemMap {} fresh (merge safe stale)))))
-
-(defn- choose [& {:as weights}]
-  (first (simple/sample (keys weights)
-                        :weigh weights)))
-
-(defn- refresh? [c]
-  (choose true c false (- 1 c)))
+  [mem] (swap! mem update-in [:gen] inc))
 
 (defn soft-memoize
   "Memoizes `f` with the option of resetting the cache at a later date."
-  [dampen f]
-  {:pre [(< 0 dampen 1)]}
+  [f]
   (let [mem (atom (mk-map))]
-    (letfn [(find-in [cache args]
-              (find (cache @mem) args))
+    (letfn [(set-mode [rec ret freq]
+              (-> rec
+                  (assoc :mode ret)
+                  (assoc :modal-freq freq)))
 
-            (move [from to cost args]
-              (when-let [[_ rec :as entry] (find-in from args)]
-                (swap! mem update-in [from] dissoc args)
-                (when (refresh? (:conf rec))
-                  (swap! mem assoc-in [to args]
-                         (update-in rec [:conf] * cost))
-                  entry)))
+            (update-mode [rec ret]
+              (let [freq (get-in rec [:freqs ret] 0)]
+                (cond-> rec
+                  (>= freq (:modal-freq rec))
+                  (set-mode ret freq))))
 
-            (refresh [args] (move :safe :fresh dampen args))
-
-            (set-cache [args]
-              (let [ret (apply f args)]
-                (swap! mem assoc-in [:stale args]
-                       (mk-c-record ret))
-                (move :stale :fresh 1.0 args)))]
+            (update-cache [rec ret]
+              (update-in rec [:freqs ret]
+                         #(inc (or % 0))))]
       [mem
        (fn [& args]
-         (-> (or (find-in :fresh args)
-                 (refresh args)
-                 (set-cache args))
-             val :val))])))
+         (let [gen (:gen @mem)]
+           (swap! mem update-in [:cache args]
+                  (fn [rec]
+                    (let [ret (delay (apply f args))]
+                      (if-not rec
+                        (mk-c-record gen @ret)
+                        (if (< (:gen rec) gen)
+                          (-> rec
+                              (update-cache @ret)
+                              (update-mode  @ret)
+                              (assoc :gen gen))
+                          rec)))))
+           (get-in @mem [:cache args :mode])))])))

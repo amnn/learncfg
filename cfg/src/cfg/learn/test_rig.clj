@@ -112,13 +112,16 @@
 
 (defn soft-k-bounded-rig
   [g ts corpus & {:as params}]
-  (grammar-rig (partial skb/learn (:dampen params))
-               g ts corpus params))
+  (grammar-rig skb/learn g ts corpus params))
 
 (comment
+
   (require '[cfg.cfg :refer :all]
            '[cfg.learn.test-rig :refer :all]
            :reload-all)
+
+  (doseq [x *1] (pprint x))
+
   ;; Balanced Parens 1
   (k-bounded-rig
    (cfg
@@ -148,7 +151,6 @@
      [< < > > < >] [< < > < > >]]
    :verbose?    true
    :error       0.05
-   :dampen      0.95
    :samples     30)
 
   ;; Balanced Parens loose
@@ -178,7 +180,6 @@
      [< < > > < >] [< < > < > >]]
    :verbose?    true
    :error       0.05
-   :dampen      0.95
    :samples     30)
 
   ;; (AB)+
@@ -208,7 +209,6 @@
      [A B A B A B A B]]
    :verbose?    true
    :error       0.05
-   :dampen      0.95
    :samples     30)
 
   ;; (AB)+ loose
@@ -232,7 +232,6 @@
      [A B A B A B A B]]
    :verbose?    true
    :error       0.05
-   :dampen      0.95
    :samples     30)
 
   ;; A^nB^n
@@ -266,7 +265,6 @@
      [A A A A B B B B]]
    :verbose?    true
    :error       0.05
-   :dampen      0.95
    :samples     30)
 
   ;; A^nB^n loose
@@ -296,7 +294,6 @@
      [A A A A B B B B]]
    :verbose?    true
    :error       0.05
-   :dampen      0.95
    :samples     30)
 
   ;; A^nB^mC^(n+m) loose
@@ -332,7 +329,6 @@
      [A B B C C C] [B B B C C C]]
    :verbose?    true
    :error       0.05
-   :dampen      0.95
    :samples     40)
 
   ;; Mathematical Expressions (loose only)
@@ -370,6 +366,5 @@
      [NUM * VAR + NUM] [NUM * < VAR + NUM >]]
    :verbose? true
    :error       0.05
-   :dampen      0.95
    :samples     60)
   )
