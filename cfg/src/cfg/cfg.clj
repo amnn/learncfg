@@ -129,7 +129,7 @@
   every rule `s => rs` in `g`. Or, if a non-terminal `nt` is also provided,
   creates a lazy sequence of the rules in `g` with `nt` as their LHS."
   ([g] (mapcat non-term-rules g))
-  ([g nt] (non-term-rules [nt (g nt)])))
+  ([g nt] (non-term-rules (find g nt))))
 
 (defn mapr
   "Applies a function to every rule in the grammar, and returns the resulting
